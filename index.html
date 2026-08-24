@@ -1,0 +1,2106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#D9622E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="意大利旅行">
+<meta name="application-name" content="意大利旅行工作台">
+<meta name="description" content="6人同行意大利12日深度游，协同攻略、地图路线、记账分账">
+<title>意大利旅行工作台</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<meta property="og:title" content="意大利旅行工作台">
+<meta property="og:description" content="6人同行意大利12日深度游，协同攻略、地图路线、记账分账">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ===== Design System ===== */
+:root {
+  --c-primary: #D9622E; --c-primary-light: #F4DCC8;
+  --c-secondary: #2E7D8F; --c-secondary-light: #C9E5EB;
+  --c-accent: #C5283D; --c-success: #4A9D5B; --c-warning: #E8A92E;
+  --c-purple: #7B5EA7; --c-bg: #FAF7F2; --c-surface: #FFFFFF;
+  --c-surface-alt: #F5F0E8; --c-border: #E5DDD0;
+  --c-text: #2D2424; --c-text-secondary: #7A6E62; --c-text-light: #A89B8C;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.06); --shadow-md: 0 4px 12px rgba(0,0,0,.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.1); --radius: 14px; --radius-sm: 8px;
+  --sidebar-w: 230px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif;background:var(--c-bg);color:var(--c-text);line-height:1.6;font-size:14px;-webkit-font-smoothing:antialiased;overflow-x:hidden;width:100%}
+
+/* ===== Layout ===== */
+.app{display:flex;min-height:100vh;max-width:100vw;overflow-x:hidden}
+.hamburger{display:none;position:fixed;top:14px;left:14px;z-index:200;width:40px;height:40px;border-radius:10px;border:none;background:var(--c-surface);box-shadow:var(--shadow-md);font-size:20px;cursor:pointer;align-items:center;justify-content:center;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:99;}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar-w);background:var(--c-surface);border-right:1px solid var(--c-border);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:100;transition:transform .3s;}
+.sidebar-header{padding:20px 18px 16px;border-bottom:1px solid var(--c-border)}
+.sidebar-header .trip-title{font-size:18px;font-weight:700;color:var(--c-text);display:flex;align-items:center;gap:8px}
+.sidebar-header .trip-sub{font-size:12px;color:var(--c-text-secondary);margin-top:4px}
+.nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius-sm);cursor:pointer;color:var(--c-text-secondary);font-size:14px;font-weight:500;transition:all .15s;margin-bottom:2px}
+.nav-item:hover{background:var(--c-surface-alt);color:var(--c-text)}
+.nav-item.active{background:var(--c-primary);color:#fff}
+.nav-item .icon{font-size:18px;width:22px;text-align:center}
+.nav-item .badge{margin-left:auto;background:var(--c-accent);color:#fff;font-size:11px;padding:1px 7px;border-radius:10px;font-weight:600}
+.nav-item.active .badge{background:rgba(255,255,255,.3)}
+
+.sidebar-footer{padding:14px 16px;border-top:1px solid var(--c-border);position:relative}
+.current-user{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);background:var(--c-surface-alt);cursor:pointer;transition:all .15s}
+.current-user:hover{background:var(--c-primary-light)}
+.current-user .avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.current-user .user-info{flex:1;min-width:0}
+.current-user .user-name{font-size:13px;font-weight:600}
+.current-user .user-responsibility{font-size:11px;color:var(--c-text-secondary)}
+.current-user .switch-icon{font-size:12px;color:var(--c-text-light)}
+.user-dropdown{position:absolute;bottom:100%;left:16px;right:16px;margin-bottom:8px;background:var(--c-surface);border-radius:var(--radius);box-shadow:var(--shadow-lg);border:1px solid var(--c-border);padding:6px;display:none;z-index:200;max-height:300px;overflow-y:auto}
+.user-dropdown.show{display:block}
+.user-option{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:background .15s}
+.user-option:hover{background:var(--c-surface-alt)}
+.user-option .avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px}
+.user-option .uo-name{font-size:13px;font-weight:600}
+.user-option .uo-desc{font-size:11px;color:var(--c-text-secondary)}
+
+/* ===== Main ===== */
+.main{flex:1;margin-left:var(--sidebar-w);min-width:0}
+.main-header{background:var(--c-surface);border-bottom:1px solid var(--c-border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.main-header h1{font-size:20px;font-weight:700}
+.main-header .header-desc{font-size:13px;color:var(--c-text-secondary);margin-top:2px}
+.content{padding:24px 28px;max-width:1300px}
+
+/* ===== Cards ===== */
+.card{background:var(--c-surface);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--c-border);padding:20px}
+.card-title{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.grid-6{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.stat-card{background:var(--c-surface);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-sm);border:1px solid var(--c-border);display:flex;align-items:center;gap:14px}
+.stat-card .stat-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.stat-card .stat-value{font-size:24px;font-weight:700;line-height:1.2}
+.stat-card .stat-label{font-size:12px;color:var(--c-text-secondary)}
+
+/* ===== Buttons ===== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;font-family:inherit}
+.btn-primary{background:var(--c-primary);color:#fff}
+.btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1.5px solid var(--c-border);color:var(--c-text)}
+.btn-outline:hover{border-color:var(--c-primary);color:var(--c-primary)}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.tag-rome{background:#FDE8E0;color:#C5283D}.tag-naples{background:#DBEAFE;color:#2563EB}
+.tag-tuscany{background:#DCFCE7;color:#16A34A}.tag-florence{background:#F3E8FF;color:#7B5EA7}
+.tag-sorrento{background:#C9E5EB;color:#2E7D8F}.tag-vatican{background:#FEF3C7;color:#D97706}
+
+/* ===== Itinerary ===== */
+.day-card{background:var(--c-surface);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--c-border);margin-bottom:14px;overflow:hidden}
+.day-card:hover{box-shadow:var(--shadow-md)}
+.day-header{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;user-select:none;transition:background .15s}
+.day-header:hover{background:var(--c-surface-alt)}
+.day-number{width:44px;height:44px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;color:#fff}
+.day-number .dn{font-size:18px;line-height:1}.day-number .dl{font-size:9px;opacity:.85}
+.day-info{flex:1;min-width:0}
+.day-info .day-city{font-size:16px;font-weight:700}
+.day-info .day-meta{font-size:12px;color:var(--c-text-secondary);display:flex;gap:12px;flex-wrap:wrap}
+.day-toggle{font-size:14px;color:var(--c-text-light);transition:transform .2s}
+.day-card.expanded .day-toggle{transform:rotate(180deg)}
+.day-body{display:none;padding:0 20px 16px}
+.day-card.expanded .day-body{display:block}
+
+.day-section-label{font-size:12px;font-weight:600;color:var(--c-text-secondary);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px;display:flex;align-items:center;gap:6px}
+
+/* Inline editable */
+.inline-edit{cursor:pointer;padding:2px 4px;border-radius:4px;transition:background .15s;border-bottom:1px dashed transparent}
+.inline-edit:hover{background:var(--c-primary-light);border-bottom-color:var(--c-primary)}
+.inline-edit input,.inline-edit textarea{width:100%;padding:6px 8px;border:1.5px solid var(--c-primary);border-radius:4px;font-size:13px;font-family:inherit;background:var(--c-surface);outline:none}
+
+/* Timeline */
+.timeline{position:relative;padding-left:24px}
+.timeline::before{content:'';position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--c-border)}
+.timeline-item{position:relative;margin-bottom:12px;padding:10px 14px;background:var(--c-surface-alt);border-radius:var(--radius-sm);transition:all .15s}
+.timeline-item:hover{background:var(--c-primary-light)}
+.timeline-item::before{content:'';position:absolute;left:-21px;top:16px;width:10px;height:10px;border-radius:50%;background:var(--c-primary);border:2px solid var(--c-surface)}
+.timeline-time{font-size:12px;font-weight:700;color:var(--c-primary)}
+.timeline-title{font-size:14px;font-weight:600;margin-top:2px}
+.timeline-desc{font-size:12px;color:var(--c-text-secondary);margin-top:3px}
+.timeline-location{font-size:11px;color:var(--c-secondary);margin-top:2px;display:flex;align-items:center;gap:3px}
+.timeline-actions{display:flex;gap:6px;margin-top:6px}
+.timeline-item .timeline-actions{opacity:0;transition:opacity .15s}
+.timeline-item:hover .timeline-actions{opacity:1}
+
+.info-row{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--c-border);font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-row .info-label{font-weight:600;color:var(--c-text-secondary);width:60px;flex-shrink:0}
+.info-row .info-value{flex:1;word-break:break-word}
+
+/* ===== Map ===== */
+#map-container{height:600px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);border:1px solid var(--c-border)}
+.map-controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.day-filter{display:flex;gap:6px;flex-wrap:wrap}
+.day-filter-btn{padding:5px 12px;border-radius:20px;border:1.5px solid var(--c-border);background:var(--c-surface);cursor:pointer;font-size:12px;font-weight:600;color:var(--c-text-secondary);transition:all .15s;font-family:inherit}
+.day-filter-btn:hover,.day-filter-btn.active{border-color:var(--c-primary);background:var(--c-primary);color:#fff}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px}
+.legend-dot{width:12px;height:12px;border-radius:50%}
+
+/* ===== Tasks ===== */
+.kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.kanban-col{background:var(--c-surface-alt);border-radius:var(--radius);padding:14px;min-height:200px}
+.kanban-col-header{font-size:13px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;text-transform:uppercase;letter-spacing:.5px}
+.kanban-col-header .count{background:var(--c-surface);padding:1px 8px;border-radius:10px;font-size:11px}
+.task-card{background:var(--c-surface);border-radius:var(--radius-sm);padding:12px;margin-bottom:8px;box-shadow:var(--shadow-sm);cursor:grab;border-left:3px solid var(--c-primary);transition:all .15s}
+.task-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.task-card .tc-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.task-card .tc-meta{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--c-text-secondary)}
+.task-card .tc-assignee{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.task-card .tc-due.urgent{color:var(--c-accent);font-weight:700}
+.priority-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+
+/* ===== Expenses ===== */
+.expense-table{width:100%;border-collapse:collapse}
+.expense-table th{text-align:left;padding:10px 12px;font-size:12px;font-weight:700;color:var(--c-text-secondary);border-bottom:2px solid var(--c-border);text-transform:uppercase;letter-spacing:.5px}
+.expense-table td{padding:10px 12px;border-bottom:1px solid var(--c-border);font-size:13px}
+.expense-table tr:hover td{background:var(--c-surface-alt)}
+.expense-table .amt{font-weight:700;font-family:'Consolas',monospace}
+.expense-table .amt-eur{color:var(--c-secondary)}
+.expense-table .amt-cny{color:var(--c-primary)}
+.shared-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.shared-badge.public{background:#DCFCE7;color:#16A34A}
+.shared-badge.private{background:#FEF3C7;color:#D97706}
+
+.expense-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.summary-box{background:linear-gradient(135deg,#fff 0%,var(--c-surface-alt) 100%);border-radius:var(--radius);padding:18px 16px;box-shadow:var(--shadow-sm);border:1px solid var(--c-border);display:flex;align-items:center;gap:14px;transition:all .2s}
+.summary-box:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.summary-box .sb-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.summary-box .sb-content{flex:1}
+.summary-box .sb-value{font-size:26px;font-weight:800;line-height:1.1}
+.summary-box .sb-label{font-size:12px;color:var(--c-text-secondary);margin-top:2px}
+.summary-box .sb-sub{font-size:11px;color:var(--c-text-light);margin-top:2px}
+
+.per-person-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:14px}
+.per-person-card{background:var(--c-surface);border-radius:var(--radius);padding:16px 12px;box-shadow:var(--shadow-sm);border:1px solid var(--c-border);text-align:center;position:relative;transition:all .2s}
+.per-person-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.per-person-card.current{border:2px solid var(--c-primary);background:linear-gradient(180deg,#fff 0%,var(--c-surface-alt) 100%)}
+.per-person-card .pp-avatar{width:48px;height:48px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--c-surface-alt);overflow:hidden}
+.per-person-card .pp-avatar .member-avatar-img{width:100% !important;height:100% !important}
+.per-person-card .pp-name{font-size:14px;font-weight:700;margin-bottom:12px}
+.per-person-card .pp-row{display:flex;justify-content:center;gap:6px;align-items:center;font-size:12px;margin-bottom:6px}
+.per-person-card .pp-row .pp-label{color:var(--c-text-light)}
+.per-person-card .pp-row .pp-value{font-weight:700}
+.per-person-card .pp-aa .pp-value{color:#16A34A}
+.per-person-card .pp-personal .pp-value{color:#D97706}
+.per-person-card .pp-total{font-size:22px;font-weight:800;margin-top:12px;padding-top:10px;border-top:1px dashed var(--c-border)}
+.per-person-card .pp-share{height:4px;border-radius:2px;background:var(--c-surface-alt);margin-top:10px;overflow:hidden}
+.per-person-card .pp-share-fill{height:100%;border-radius:2px}
+
+.category-bar{height:8px;border-radius:4px;background:var(--c-surface-alt);overflow:hidden;margin-top:6px}
+.category-bar-fill{height:100%;border-radius:4px;transition:width .5s}
+
+/* ===== Members ===== */
+.member-card{background:var(--c-surface);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);border:1px solid var(--c-border);text-align:center;cursor:pointer;transition:all .15s;position:relative}
+.member-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.member-card.current{border:2px solid var(--c-primary)}
+.member-card .mc-avatar{width:56px;height:56px;border-radius:50%;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:28px}
+.member-card .mc-name{font-size:15px;font-weight:700}
+.member-card .mc-duty{font-size:11px;color:var(--c-text-secondary);margin-top:2px;line-height:1.4}
+.member-card .mc-badge{position:absolute;top:10px;right:10px;background:var(--c-success);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600}
+
+/* ===== Activity Feed ===== */
+.activity-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--c-border)}
+.activity-item:last-child{border-bottom:none}
+.activity-item .ai-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.activity-item .ai-content{flex:1;font-size:13px}
+.activity-item .ai-time{font-size:11px;color:var(--c-text-light)}
+
+/* ===== Modal ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:auto}
+.modal{background:var(--c-surface);border-radius:var(--radius);padding:24px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);transform:scale(.95);transition:transform .2s}
+.modal-overlay.show .modal{transform:scale(1)}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:16px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--c-text-secondary);margin-bottom:4px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1.5px solid var(--c-border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--c-surface);color:var(--c-text);transition:border-color .15s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--c-primary)}
+.form-group textarea{resize:vertical;min-height:70px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+
+/* Location search dropdown */
+.location-search{position:relative}
+.location-suggestions{position:absolute;top:100%;left:0;right:0;background:var(--c-surface);border:1.5px solid var(--c-border);border-radius:var(--radius-sm);max-height:180px;overflow-y:auto;z-index:10;display:none;box-shadow:var(--shadow-md)}
+.location-suggestions.show{display:block}
+.location-suggestion{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--c-border)}
+.location-suggestion:last-child{border-bottom:none}
+.location-suggestion:hover{background:var(--c-primary-light)}
+.location-suggestion .ls-name{font-weight:600}
+.location-suggestion .ls-city{font-size:11px;color:var(--c-text-secondary)}
+
+/* ===== Toast ===== */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--c-text);color:#fff;padding:12px 20px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);z-index:2000;transform:translateY(100px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--c-text-light)}
+.empty-state .es-icon{font-size:48px;margin-bottom:10px}
+
+.leaflet-popup-content{font-size:13px}
+.leaflet-popup-content strong{color:var(--c-primary)}
+.section-gap{margin-bottom:24px}
+.hero-countdown-inline{display:none}
+.member-avatar-img{width:1.6em;height:1.6em;border-radius:50%;object-fit:cover;display:inline-block;vertical-align:middle}
+.mc-avatar .member-avatar-img,.avatar .member-avatar-img,.ai-avatar .member-avatar-img,#cu-avatar .member-avatar-img{width:100% !important;height:100% !important}
+
+/* ===== Mobile ===== */
+@media(max-width:768px){
+  .hamburger{display:flex}
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.active{display:block}
+  .main{margin-left:0;max-width:100vw;overflow-x:hidden}
+  .main-header{padding:14px 18px 14px 66px}
+  .main-header h1{font-size:17px}
+  .content{padding:16px 14px;max-width:100vw}
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr}
+  .grid-6{grid-template-columns:repeat(3,1fr)}
+  .expense-summary{grid-template-columns:repeat(2,1fr)}
+  .per-person-grid{grid-template-columns:repeat(3,1fr)}
+  .kanban{grid-template-columns:1fr 1fr}
+  #map-container{height:350px}
+  .day-header{padding:12px 14px}
+  .day-number{width:36px;height:36px;border-radius:10px}
+  .day-number .dn{font-size:16px}
+  .day-info .day-city{font-size:14px}
+  .day-body{padding:0 14px 14px}
+  .modal{max-width:calc(100vw - 20px);padding:18px}
+  .member-card{padding:14px}
+  .member-card .mc-avatar{width:44px;height:44px;font-size:22px}
+  .member-card .mc-name{font-size:13px}
+  .dash-hero{padding:20px 16px !important;flex-direction:column !important;gap:12px !important}
+  .dash-hero>div:first-child>div:first-of-type{font-size:11px !important}
+  .dash-hero>div:first-child>div:nth-of-type(2){font-size:22px !important;font-weight:700 !important}
+  .dash-hero>div:first-child>div:nth-of-type(3){font-size:12px !important;white-space:normal !important;word-break:break-word;line-height:1.5}
+  .dash-hero>div:first-child>div:last-of-type{margin-top:8px !important}
+  .hero-stats{flex-direction:column !important;gap:6px !important;font-size:11px !important}
+  .hero-countdown-desktop{display:none !important}
+  .hero-countdown-inline{display:block !important}
+  .summary-box{padding:12px}
+  .summary-box .sb-value{font-size:18px}
+  .expense-wrapper{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .expense-table{min-width:600px}
+  .expense-table th,.expense-table td{padding:8px 8px;font-size:12px}
+  .per-person-card{padding:12px 8px}
+  .per-person-card .pp-avatar{width:40px;height:40px;font-size:20px}
+  .per-person-card .pp-name{font-size:13px}
+  .per-person-card .pp-total{font-size:17px}
+  .per-person-card .pp-row{font-size:11px}
+  .task-card{padding:10px}
+  .packing-toolbar{flex-wrap:wrap;gap:8px}
+  .packing-toolbar select{flex:1;min-width:120px}
+  .sync-status-btn{font-size:11px;padding:6px 10px}
+}
+@media(max-width:400px){
+  .grid-6{grid-template-columns:repeat(2,1fr)}
+  .expense-summary{grid-template-columns:1fr}
+  .per-person-grid{grid-template-columns:repeat(2,1fr)}
+  .kanban{grid-template-columns:1fr}
+  .main-header{padding:12px 14px 12px 62px}
+  .main-header h1{font-size:15px}
+  .content{padding:12px 10px}
+  .modal{max-width:calc(100vw - 12px);padding:14px}
+  .member-card .mc-avatar{width:38px;height:38px;font-size:18px}
+  .packing-toolbar select{font-size:12px}
+}
+/* ===== 图片上传 & 缩略图 & Lightbox ===== */
+.img-upload-area{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.img-thumb{width:72px;height:72px;border-radius:8px;object-fit:cover;cursor:pointer;border:2px solid var(--c-border);transition:all .15s;position:relative}
+.img-thumb:hover{border-color:var(--c-primary);transform:scale(1.05)}
+.img-thumb-wrap{position:relative;display:inline-block}
+.img-thumb-wrap .img-del{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--c-accent);color:#fff;border:none;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:2}
+.img-add-btn{width:72px;height:72px;border-radius:8px;border:2px dashed var(--c-border);background:var(--c-surface-alt);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--c-text-light);transition:all .15s}
+.img-add-btn:hover{border-color:var(--c-primary);color:var(--c-primary);background:var(--c-primary-light)}
+.timeline-img-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.timeline-img{width:60px;height:60px;border-radius:6px;object-fit:cover;cursor:pointer;border:1.5px solid var(--c-border);transition:all .15s}
+.timeline-img:hover{border-color:var(--c-primary);transform:scale(1.08)}
+.lightbox-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9999;align-items:center;justify-content:center;cursor:zoom-out}
+.lightbox-overlay.show{display:flex}
+.lightbox-overlay img{max-width:92vw;max-height:92vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5);cursor:default}
+.lightbox-close{position:absolute;top:16px;right:20px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.lightbox-close:hover{background:rgba(255,255,255,.3)}
+.lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;border:none;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.lightbox-nav:hover{background:rgba(255,255,255,.3)}
+.lightbox-nav.prev{left:16px}
+.lightbox-nav.next{right:16px}
+.lightbox-counter{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;background:rgba(255,255,255,.12);padding:4px 14px;border-radius:12px}
+@media(max-width:768px){.img-thumb{width:56px;height:56px}.img-add-btn{width:56px;height:56px;font-size:22px}.timeline-img{width:48px;height:48px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <button class="hamburger" id="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="trip-title">意大利旅行工作台</div>
+      <div class="trip-sub">2026.09.26 — 10.07 · 6人同行</div>
+    </div>
+    <nav class="nav" id="nav">
+      <div class="nav-item active" data-view="dashboard"><span class="icon">🏠</span> 概览</div>
+      <div class="nav-item" data-view="itinerary"><span class="icon">📅</span> 行程攻略</div>
+      <div class="nav-item" data-view="map"><span class="icon">🗺️</span> 地图路线</div>
+      <div class="nav-item" data-view="tasks"><span class="icon">✅</span> 备忘待办 <span class="badge" id="task-badge">0</span></div>
+      <div class="nav-item" data-view="packing"><span class="icon">🧳</span> 行李准备 <span class="badge" id="packing-badge" style="background:#4EA347;">0</span></div>
+      <div class="nav-item" data-view="expenses"><span class="icon">💰</span> 记账本</div>
+      <div class="nav-item" data-view="members"><span class="icon">👥</span> 成员</div>
+      <div class="nav-item" data-view="activity"><span class="icon">📋</span> 协同记录</div>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="position:relative;">
+        <div class="current-user" id="current-user-btn">
+          <div class="avatar" id="cu-avatar"></div>
+          <div class="user-info">
+            <div class="user-name" id="cu-name"></div>
+            <div class="user-responsibility" id="cu-responsibility"></div>
+          </div>
+          <span class="switch-icon">⇅</span>
+        </div>
+        <div class="user-dropdown" id="user-dropdown"></div>
+      </div>
+      <div id="sync-indicator" style="font-size:11px;margin-top:10px;text-align:center;cursor:pointer;" onclick="setupSupabaseConfig()" title="点击配置 Supabase 实时同步">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A89B8C;margin-right:4px;"></span> 离线模式
+      </div>
+      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260821.3</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="main-header">
+      <div>
+        <h1 id="page-title">概览仪表盘</h1>
+        <div class="header-desc" id="page-desc">行程总览与实时动态</div>
+      </div>
+      <div id="header-actions"></div>
+    </header>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay"><div class="modal" id="modal"></div></div>
+<div class="lightbox-overlay" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-nav prev" onclick="event.stopPropagation();lightboxNav(-1)">◀</button>
+  <button class="lightbox-nav next" onclick="event.stopPropagation();lightboxNav(1)">▶</button>
+  <img id="lightbox-img" src="" alt="" onclick="event.stopPropagation()">
+  <div class="lightbox-counter" id="lightbox-counter"></div>
+</div>
+<div class="toast" id="toast"></div>
+<input type="file" id="hidden-file-input" accept="image/*" multiple style="display:none" onchange="handleImageFiles(this)">
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ================================================================
+   IMAGE STORE: IndexedDB (stores images as base64, avoids localStorage limits)
+   ================================================================ */
+const imgDB = (() => {
+  let db = null;
+  const DB_NAME = 'italy-trip-images', STORE = 'images', V = 1;
+  function open() {
+    return new Promise((resolve, reject) => {
+      if (db) return resolve(db);
+      const req = indexedDB.open(DB_NAME, V);
+      req.onupgradeneeded = e => { if (!e.target.result.objectStoreNames.contains(STORE)) e.target.result.createObjectStore(STORE); };
+      req.onsuccess = e => { db = e.target.result; resolve(db); };
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function save(key, b64) { const d = await open(); return new Promise((r, e) => { const t = d.transaction(STORE, 'readwrite').objectStore(STORE).put(b64, key); t.onsuccess = () => r(key); t.onerror = () => e(t.error); }); }
+  async function load(key) { const d = await open(); return new Promise((r, e) => { const t = d.transaction(STORE).objectStore(STORE).get(key); t.onsuccess = () => r(t.result); t.onerror = () => e(t.error); }); }
+  async function remove(key) { const d = await open(); return new Promise((r, e) => { const t = d.transaction(STORE, 'readwrite').objectStore(STORE).delete(key); t.onsuccess = () => r(); t.onerror = () => e(t.error); }); }
+  return { save, load, remove };
+})();
+
+/* ================================================================
+   DATA: Members
+   ================================================================ */
+const MINION_AVATAR = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="1.6em" height="1.6em" style="display:inline-block;vertical-align:middle;"><circle cx="32" cy="32" r="28" fill="#FCE029"/><rect x="4" y="22" width="56" height="6" rx="3" fill="#555"/><circle cx="22" cy="28" r="11" fill="#fff" stroke="#777" stroke-width="2"/><circle cx="42" cy="28" r="11" fill="#fff" stroke="#777" stroke-width="2"/><circle cx="22" cy="28" r="4" fill="#333"/><circle cx="42" cy="28" r="4" fill="#333"/><path d="M25 44 Q32 50 39 44" stroke="#333" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>';
+const LXY_AVATAR = '<img src="avatar-lxy.jpg" class="member-avatar-img" alt="李心怡">';
+const YZC_AVATAR = '<img src="avatar-yzc.jpg" class="member-avatar-img" alt="严泽淳">';
+const JY_AVATAR = '<img src="avatar-jy.jpg" class="member-avatar-img" alt="单婧怡">';
+const LY_AVATAR = '<img src="avatar-ly.jpg" class="member-avatar-img" alt="刘意">';
+
+const MEMBERS = [
+  { id:5, name:'李心怡', duty:'罗马行程 D1-3', avatar:LXY_AVATAR, color:'#7B5EA7' },
+  { id:4, name:'黄玉婷', duty:'罗马行程 D1-3', avatar:MINION_AVATAR, color:'#C5283D' },
+  { id:1, name:'刘意', duty:'南意行程 D4-6', avatar:LY_AVATAR, color:'#D9622E' },
+  { id:2, name:'单婧怡', duty:'南意行程 D4-6', avatar:JY_AVATAR, color:'#2E7D8F' },
+  { id:3, name:'严泽淳', duty:'托斯卡纳行程 D7-9', avatar:YZC_AVATAR, color:'#4A9D5B' },
+  { id:6, name:'何鸿蔚', duty:'佛罗伦萨行程 D10-11', avatar:'🦁', color:'#E8A92E' },
+];
+
+const CITY_COLORS = {
+  '罗马': { tag:'tag-rome', color:'#C5283D', lat:41.9028, lng:12.4964 },
+  '梵蒂冈': { tag:'tag-vatican', color:'#D97706', lat:41.9022, lng:12.4539 },
+  '那不勒斯': { tag:'tag-naples', color:'#2563EB', lat:40.8518, lng:14.2681 },
+  '索伦托': { tag:'tag-sorrento', color:'#2E7D8F', lat:40.6263, lng:14.3758 },
+  '卡普里岛': { tag:'tag-sorrento', color:'#0EA5E9', lat:40.5505, lng:14.2433 },
+  '波西塔诺': { tag:'tag-sorrento', color:'#06B6D4', lat:40.6281, lng:14.4842 },
+  '阿马尔菲': { tag:'tag-sorrento', color:'#0891B2', lat:40.6340, lng:14.6027 },
+  '托斯卡纳': { tag:'tag-tuscany', color:'#16A34A', lat:43.0798, lng:11.6755 },
+  '皮恩扎': { tag:'tag-tuscany', color:'#15803D', lat:43.0798, lng:11.6755 },
+  '佛罗伦萨': { tag:'tag-florence', color:'#7B5EA7', lat:43.7696, lng:11.2558 },
+  '锡耶纳': { tag:'tag-tuscany', color:'#65A30D', lat:43.3188, lng:11.3308 },
+};
+
+/* ================================================================
+   DATA: Location Database (for search & map)
+   ================================================================ */
+const LOCATION_DB = [
+  { name:'罗马FCO机场', city:'罗马', lat:41.8003, lng:12.2389 },
+  { name:'罗马Termini火车站', city:'罗马', lat:41.9010, lng:12.5008 },
+  { name:'西班牙阶梯', city:'罗马', lat:41.9058, lng:12.4823 },
+  { name:'特雷维喷泉（许愿池）', city:'罗马', lat:41.9009, lng:12.4833 },
+  { name:'许愿池', city:'罗马', lat:41.9009, lng:12.4833 },
+  { name:'万神殿', city:'罗马', lat:41.8986, lng:12.4769 },
+  { name:'纳沃纳广场', city:'罗马', lat:41.8992, lng:12.4731 },
+  { name:'四河喷泉', city:'罗马', lat:41.8992, lng:12.4731 },
+  { name:'鲜花广场', city:'罗马', lat:41.8958, lng:12.4731 },
+  { name:'真理之口', city:'罗马', lat:41.8883, lng:12.4833 },
+  { name:'特拉斯提弗列区', city:'罗马', lat:41.8890, lng:12.4690 },
+  { name:'罗马斗兽场', city:'罗马', lat:41.8902, lng:12.4922 },
+  { name:'古罗马广场', city:'罗马', lat:41.8925, lng:12.4853 },
+  { name:'帕拉蒂尼山', city:'罗马', lat:41.8894, lng:12.4867 },
+  { name:'博尔盖塞美术馆', city:'罗马', lat:41.9143, lng:12.4924 },
+  { name:'苹丘观景台', city:'罗马', lat:41.9128, lng:12.4603 },
+  { name:'圣彼得大教堂', city:'梵蒂冈', lat:41.9022, lng:12.4539 },
+  { name:'圣天使堡', city:'罗马', lat:41.9031, lng:12.4663 },
+  { name:'圣彼得广场', city:'梵蒂冈', lat:41.9025, lng:12.4565 },
+  { name:'梵蒂冈博物馆', city:'梵蒂冈', lat:41.9065, lng:12.4536 },
+  { name:'西斯廷礼拜堂', city:'梵蒂冈', lat:41.9065, lng:12.4536 },
+  { name:'那不勒斯Garibaldi站', city:'那不勒斯', lat:40.8359, lng:14.2688 },
+  { name:'那不勒斯火车站', city:'那不勒斯', lat:40.8359, lng:14.2688 },
+  { name:'索伦托火车站', city:'索伦托', lat:40.6263, lng:14.3758 },
+  { name:'索伦托码头', city:'索伦托', lat:40.6280, lng:14.3670 },
+  { name:'索伦托老城', city:'索伦托', lat:40.6263, lng:14.3758 },
+  { name:'塔索广场', city:'索伦托', lat:40.6260, lng:14.3755 },
+  { name:'卡普里岛码头', city:'卡普里岛', lat:40.5505, lng:14.2433 },
+  { name:'卡普里岛', city:'卡普里岛', lat:40.5505, lng:14.2433 },
+  { name:'蓝洞', city:'卡普里岛', lat:40.5533, lng:14.1867 },
+  { name:'La Zagara餐厅', city:'卡普里岛', lat:40.5480, lng:14.2400 },
+  { name:'克虏伯路', city:'卡普里岛', lat:40.5480, lng:14.2430 },
+  { name:'奥古斯都花园', city:'卡普里岛', lat:40.5480, lng:14.2430 },
+  { name:'Carthusia香水店', city:'卡普里岛', lat:40.5500, lng:14.2440 },
+  { name:'波西塔诺码头', city:'波西塔诺', lat:40.6281, lng:14.4842 },
+  { name:'柠檬镜子', city:'波西塔诺', lat:40.6281, lng:14.4842 },
+  { name:'波西塔诺', city:'波西塔诺', lat:40.6281, lng:14.4842 },
+  { name:'Terrazze Celè', city:'波西塔诺', lat:40.6280, lng:14.4840 },
+  { name:'Fiordo di Furore', city:'波西塔诺', lat:40.6250, lng:14.5300 },
+  { name:'阿马尔菲码头', city:'阿马尔菲', lat:40.6340, lng:14.6027 },
+  { name:'阿马尔菲大教堂', city:'阿马尔菲', lat:40.6340, lng:14.6027 },
+  { name:'天堂回廊', city:'阿马尔菲', lat:40.6340, lng:14.6027 },
+  { name:'Royal Gelato', city:'阿马尔菲', lat:40.6335, lng:14.6025 },
+  { name:'阿马尔菲', city:'阿马尔菲', lat:40.6340, lng:14.6027 },
+  { name:'皮恩扎古城', city:'皮恩扎', lat:43.0798, lng:11.6755 },
+  { name:'皮恩扎', city:'皮恩扎', lat:43.0798, lng:11.6755 },
+  { name:'奥尔恰谷', city:'托斯卡纳', lat:43.0707, lng:11.6125 },
+  { name:'小耳朵教堂', city:'托斯卡纳', lat:43.0680, lng:11.6260 },
+  { name:'丝柏之路', city:'托斯卡纳', lat:43.0700, lng:11.6300 },
+  { name:'蒙特普尔恰诺', city:'托斯卡纳', lat:43.0976, lng:11.7888 },
+  { name:'圣奎里科', city:'托斯卡纳', lat:43.0710, lng:11.6200 },
+  { name:'锡耶纳', city:'锡耶纳', lat:43.3188, lng:11.3308 },
+  { name:'田野广场', city:'锡耶纳', lat:43.3188, lng:11.3308 },
+  { name:'锡耶纳大教堂', city:'锡耶纳', lat:43.3175, lng:11.3270 },
+  { name:'佛罗伦萨机场', city:'佛罗伦萨', lat:43.8100, lng:11.2050 },
+  { name:'圣母百花大教堂', city:'佛罗伦萨', lat:43.7731, lng:11.2560 },
+  { name:'圣罗伦佐中央市场', city:'佛罗伦萨', lat:43.7760, lng:11.2500 },
+  { name:'共和广场', city:'佛罗伦萨', lat:43.7725, lng:11.2520 },
+  { name:'领主广场', city:'佛罗伦萨', lat:43.7696, lng:11.2546 },
+  { name:'乌菲兹美术馆', city:'佛罗伦萨', lat:43.7677, lng:11.2557 },
+  { name:'老桥', city:'佛罗伦萨', lat:43.7678, lng:11.2533 },
+  { name:'米开朗基罗广场', city:'佛罗伦萨', lat:43.7644, lng:11.2658 },
+  { name:'学院美术馆', city:'佛罗伦萨', lat:43.7762, lng:11.2587 },
+  { name:'美第奇礼拜堂', city:'佛罗伦萨', lat:43.7745, lng:11.2570 },
+  { name:'圣十字圣殿', city:'佛罗伦萨', lat:43.7592, lng:11.2610 },
+  { name:'皮蒂宫', city:'佛罗伦萨', lat:43.7650, lng:11.2495 },
+  { name:'托纳布奥尼大街', city:'佛罗伦萨', lat:43.7720, lng:11.2530 },
+  { name:'Il Ricettario', city:'佛罗伦萨', lat:43.7680, lng:11.2535 },
+  { name:'Trattoria Zaza', city:'佛罗伦萨', lat:43.7760, lng:11.2500 },
+  { name:'Da Nerbone', city:'佛罗伦萨', lat:43.7760, lng:11.2500 },
+  { name:'Vivoli', city:'佛罗伦萨', lat:43.7690, lng:11.2550 },
+  { name:'Monti区', city:'罗马', lat:41.8960, lng:12.4990 },
+  { name:'Borgo Pio街区', city:'梵蒂冈', lat:41.9030, lng:12.4600 },
+  { name:'孔多蒂大街', city:'罗马', lat:41.9055, lng:12.4820 },
+  { name:'洗礼堂', city:'佛罗伦萨', lat:43.7735, lng:11.2565 },
+  { name:'大教堂博物馆', city:'佛罗伦萨', lat:43.7738, lng:11.2570 },
+  { name:'佛罗伦萨SMN火车站', city:'佛罗伦萨', lat:43.7796, lng:11.2499 },
+  { name:'Caffè Pasticceria Gilli', city:'佛罗伦萨', lat:43.7725, lng:11.2525 },
+];
+
+/* ================================================================
+   DATA: Initial Itinerary
+   ================================================================ */
+const INITIAL_ITINERARY = [
+  { id:1, date:'2026-09-26', dow:'周六', city:'罗马', transport:'机场快线+步行',
+    accommodation:'西班牙阶梯附近AIRBNB（三晚¥11662.77，人均¥777/晚）', notes:'',
+    activities:[
+      {timeStart:'08:00',timeEnd:'08:00',title:'抵达罗马FCO机场',desc:'航班抵达，入境通关',locationName:'罗马FCO机场'},
+      {timeStart:'09:00',timeEnd:'10:30',title:'机场→市区',desc:'Leonardo Express至Termini站，打车至民宿放行李',locationName:'罗马Termini火车站'},
+      {timeStart:'10:30',timeEnd:'11:30',title:'西班牙阶梯',desc:'破船喷泉、孔多蒂大街',locationName:'西班牙阶梯'},
+      {timeStart:'11:45',timeEnd:'12:30',title:'特雷维喷泉（许愿池）',desc:'步行约10分钟',locationName:'特雷维喷泉（许愿池）'},
+      {timeStart:'12:45',timeEnd:'13:45',title:'万神殿',desc:'参观万神殿',locationName:'万神殿'},
+      {timeStart:'13:45',timeEnd:'14:45',title:'午餐',desc:'万神殿周边用餐',locationName:'万神殿'},
+      {timeStart:'15:00',timeEnd:'16:00',title:'纳沃纳广场',desc:'四河喷泉、街头艺人',locationName:'纳沃纳广场'},
+      {timeStart:'16:15',timeEnd:'17:00',title:'鲜花广场',desc:'逛市场/氛围',locationName:'鲜花广场'},
+      {timeStart:'17:15',timeEnd:'17:45',title:'真理之口',desc:'',locationName:'真理之口'},
+      {timeStart:'18:00',timeEnd:'20:00',title:'晚餐',desc:'推荐特拉斯提弗列区',locationName:'特拉斯提弗列区'},
+    ]},
+  { id:2, date:'2026-09-27', dow:'周日', city:'罗马', transport:'地铁+步行', accommodation:'同上', notes:'斗兽场抢票！博尔盖塞需提前预约',
+    activities:[
+      {timeStart:'08:00',timeEnd:'08:30',title:'民宿早餐出发',desc:'地铁B线至Colosseo站',locationName:'罗马斗兽场'},
+      {timeStart:'08:30',timeEnd:'10:30',title:'罗马斗兽场（已预约）',desc:'',locationName:'罗马斗兽场'},
+      {timeStart:'10:30',timeEnd:'12:30',title:'古罗马广场',desc:'Foro Romano遗址群',locationName:'古罗马广场'},
+      {timeStart:'12:30',timeEnd:'13:30',title:'帕拉蒂尼山',desc:'俯瞰古罗马全景',locationName:'帕拉蒂尼山'},
+      {timeStart:'13:30',timeEnd:'14:30',title:'午餐',desc:'Monti区用餐',locationName:'Monti区'},
+      {timeStart:'15:00',timeEnd:'17:00',title:'博尔盖塞美术馆',desc:'需提前预约',locationName:'博尔盖塞美术馆'},
+      {timeStart:'17:15',timeEnd:'18:30',title:'苹丘观景台看日落',desc:'9月底日落约18:50',locationName:'苹丘观景台'},
+      {timeStart:'19:00',timeEnd:'21:00',title:'晚餐',desc:'特拉斯提弗列或Monti区',locationName:'特拉斯提弗列区'},
+    ]},
+  { id:3, date:'2026-09-28', dow:'周一', city:'罗马', transport:'地铁+步行', accommodation:'同上', notes:'圣彼得大教堂已预约含登顶；梵蒂冈博物馆15:30预约',
+    activities:[
+      {timeStart:'08:00',timeEnd:'08:30',title:'民宿早餐出发',desc:'地铁A线至Ottaviano站',locationName:'圣彼得大教堂'},
+      {timeStart:'08:30',timeEnd:'10:30',title:'圣彼得大教堂（含登顶）',desc:'已预约',locationName:'圣彼得大教堂'},
+      {timeStart:'10:30',timeEnd:'12:30',title:'圣天使堡/圣彼得广场',desc:'可选参观或散步',locationName:'圣天使堡'},
+      {timeStart:'12:30',timeEnd:'13:30',title:'午餐',desc:'梵蒂冈周边Borgo Pio街区',locationName:'Borgo Pio街区'},
+      {timeStart:'13:30',timeEnd:'15:00',title:'自由活动/休息/补拍',desc:'',locationName:'梵蒂冈博物馆'},
+      {timeStart:'15:30',timeEnd:'19:00',title:'梵蒂冈博物馆+西斯廷礼拜堂',desc:'已预约15:30',locationName:'梵蒂冈博物馆'},
+      {timeStart:'19:30',timeEnd:'21:00',title:'晚餐',desc:'梵蒂冈或特拉斯提弗列区',locationName:'特拉斯提弗列区'},
+    ]},
+  { id:4, date:'2026-09-29', dow:'周二', city:'索伦托', transport:'火车', accommodation:'索伦托住宿未订', notes:'火车票可提前订',
+    activities:[
+      {timeStart:'08:00',timeEnd:'09:00',title:'罗马→那不勒斯',desc:'Frecciarossa国铁约1h',locationName:'那不勒斯火车站'},
+      {timeStart:'10:00',timeEnd:'11:00',title:'那不勒斯→索伦托',desc:'Campania Express约1h，15欧',locationName:'索伦托火车站'},
+      {timeStart:'14:00',timeEnd:'19:00',title:'索伦托老城',desc:'塔索广场、悬崖公路',locationName:'索伦托老城'},
+      {timeStart:'19:00',timeEnd:'21:00',title:'索伦托晚餐',desc:'海滨小镇漫步',locationName:'索伦托老城'},
+    ]},
+  { id:5, date:'2026-09-30', dow:'周三', city:'卡普里岛', transport:'轮渡+岛上交通', accommodation:'索伦托', notes:'蓝洞视海浪情况；返程留意末班轮渡',
+    activities:[
+      {timeStart:'08:30',timeEnd:'09:00',title:'索伦托轮渡→卡普里岛',desc:'Ferryhopper提前1天订，往返45欧',locationName:'卡普里岛码头'},
+      {timeStart:'09:30',timeEnd:'11:30',title:'蓝洞',desc:'大船→换小木船入洞，只收现金',locationName:'蓝洞'},
+      {timeStart:'11:30',timeEnd:'12:00',title:'敞篷车→La Zagara餐厅',desc:'沿海车程20分钟',locationName:'La Zagara餐厅'},
+      {timeStart:'12:00',timeEnd:'13:30',title:'悠闲午餐',desc:'',locationName:'La Zagara餐厅'},
+      {timeStart:'14:00',timeEnd:'16:00',title:'克虏伯路+奥古斯都花园',desc:'悬崖观景',locationName:'克虏伯路'},
+      {timeStart:'17:45',timeEnd:'18:10',title:'轮渡返回索伦托',desc:'末班约18:30',locationName:'索伦托码头'},
+    ]},
+  { id:6, date:'2026-10-01', dow:'周四', city:'波西塔诺+阿马尔菲', transport:'轮渡', accommodation:'索伦托', notes:'返程票务必提前买好！末班约17:30',
+    activities:[
+      {timeStart:'09:30',timeEnd:'10:05',title:'索伦托→波西塔诺',desc:'渡轮25分钟直达',locationName:'波西塔诺码头'},
+      {timeStart:'10:40',timeEnd:'11:50',title:'波西塔诺打卡',desc:'柠檬镜子、陶瓷店、全景机位、三角梅墙',locationName:'波西塔诺'},
+      {timeStart:'12:00',timeEnd:'13:30',title:'悬崖海景午餐',desc:'Terrazze Celè',locationName:'Terrazze Celè'},
+      {timeStart:'14:05',timeEnd:'14:20',title:'波西塔诺→阿马尔菲',desc:'渡轮15分钟',locationName:'阿马尔菲码头'},
+      {timeStart:'14:20',timeEnd:'16:20',title:'阿马尔菲打卡',desc:'大教堂、天堂回廊、柠檬冰淇淋',locationName:'阿马尔菲大教堂'},
+      {timeStart:'17:00',timeEnd:'19:00',title:'返程索伦托',desc:'优先渡轮',locationName:'索伦托码头'},
+    ]},
+  { id:7, date:'2026-10-02', dow:'周五', city:'托斯卡纳', transport:'火车+自驾', accommodation:'皮恩扎农庄', notes:'索伦托到那不勒斯票现场买；那不勒斯到罗马可蹲打折',
+    activities:[
+      {timeStart:'07:20',timeEnd:'09:00',title:'索伦托→那不勒斯',desc:'Circumvesuviana线',locationName:'那不勒斯火车站'},
+      {timeStart:'09:43',timeEnd:'10:53',title:'那不勒斯→罗马',desc:'高铁至Termini',locationName:'罗马Termini火车站'},
+      {timeStart:'11:00',timeEnd:'11:40',title:'罗马取车',desc:'租车取车',locationName:'罗马Termini火车站'},
+      {timeStart:'11:40',timeEnd:'14:00',title:'自驾罗马→皮恩扎',desc:'约2.5h',locationName:'皮恩扎'},
+      {timeStart:'14:00',timeEnd:'17:00',title:'皮恩扎古城游览',desc:'入住农庄',locationName:'皮恩扎古城'},
+      {timeStart:'17:30',timeEnd:'18:30',title:'城墙观景台看日落',desc:'',locationName:'皮恩扎古城'},
+      {timeStart:'19:00',timeEnd:'21:00',title:'皮恩扎晚餐',desc:'',locationName:'皮恩扎古城'},
+    ]},
+  { id:8, date:'2026-10-03', dow:'周六', city:'托斯卡纳', transport:'自驾', accommodation:'皮恩扎农庄', notes:'租车！！！',
+    activities:[
+      {timeStart:'09:30',timeEnd:'12:00',title:'奥尔恰谷漫游',desc:'小耳朵教堂、丝柏之路',locationName:'奥尔恰谷'},
+      {timeStart:'12:00',timeEnd:'14:00',title:'蒙特普尔恰诺游览',desc:'古城+午餐',locationName:'蒙特普尔恰诺'},
+      {timeStart:'14:00',timeEnd:'16:00',title:'奥尔恰谷拍照',desc:'圣奎里科、丝柏树',locationName:'圣奎里科'},
+      {timeStart:'18:30',timeEnd:'19:30',title:'皮恩扎城墙日落',desc:'可选',locationName:'皮恩扎古城'},
+      {timeStart:'19:30',timeEnd:'21:00',title:'农庄或古城晚餐',desc:'',locationName:'皮恩扎古城'},
+    ]},
+  { id:9, date:'2026-10-04', dow:'周日', city:'托斯卡纳-佛罗伦萨', transport:'自驾', accommodation:'老桥附近', notes:'',
+    activities:[
+      {timeStart:'09:00',timeEnd:'10:10',title:'皮恩扎→锡耶纳',desc:'自驾约1h',locationName:'锡耶纳'},
+      {timeStart:'10:10',timeEnd:'15:00',title:'锡耶纳游览',desc:'田野广场、大教堂+午餐',locationName:'锡耶纳大教堂'},
+      {timeStart:'15:00',timeEnd:'16:30',title:'锡耶纳→佛罗伦萨',desc:'自驾约1.5h',locationName:'佛罗伦萨机场'},
+      {timeStart:'16:30',timeEnd:'17:00',title:'佛罗伦萨还车',desc:'机场还车',locationName:'佛罗伦萨机场'},
+      {timeStart:'19:00',timeEnd:'21:00',title:'佛罗伦萨晚餐',desc:'入住老桥附近',locationName:'老桥'},
+    ]},
+  { id:10, date:'2026-10-05', dow:'周一', city:'佛罗伦萨', transport:'步行+公交', accommodation:'老桥附近',
+    notes:'大殿周一10:15开门，务必第一批排队！衣着须遮肩盖膝否则禁止入内。Brunelleschi Pass联票€30。穹顶预约迟到5分钟作废！公交票提前在烟草店买€1.5',
+    memo:'Trattoria Zaza须提前电话预约+39 055 215411。10月5日日落约18:45-19:00',
+    activities:[
+      {timeStart:'10:15',timeEnd:'11:15',title:'教堂大殿（免费）',desc:'大殿周一10:15开门，务必第一批排队人最少。参观穹顶壁画《最后的审判》',locationName:'圣母百花大教堂'},
+      {timeStart:'11:15',timeEnd:'12:00',title:'洗礼堂（San Giovanni）',desc:'使用Brunelleschi Pass（€30联票）进入，看金色马赛克穹顶和天堂之门复制品',locationName:'洗礼堂'},
+      {timeStart:'12:00',timeEnd:'12:30',title:'地下遗迹（地宫）',desc:'位于大殿正下方，看古罗马马赛克地板和早期教堂遗址',locationName:'圣母百花大教堂'},
+      {timeStart:'12:30',timeEnd:'13:00',title:'步行前往中央市场',desc:'约8分钟',locationName:'圣罗伦佐中央市场'},
+      {timeStart:'13:00',timeEnd:'13:45',title:'午餐',desc:'选项A：市场内Da Nerbone吃牛肚包（排队快站着吃）；选项B：Trattoria Zaza吃T骨牛排（须提前电话预约+39 055 215411）',locationName:'Trattoria Zaza'},
+      {timeStart:'13:50',timeEnd:'14:10',title:'到达穹顶入口排队',desc:'位置在教堂侧面（Via della Canonica），出示预约码+Pass。迟到5分钟作废！',locationName:'圣母百花大教堂'},
+      {timeStart:'14:15',timeEnd:'15:00',title:'登顶穹顶（核心）',desc:'爬463级台阶（无电梯）约35-45分钟。登顶后360°俯瞰佛罗伦萨全城',locationName:'圣母百花大教堂'},
+      {timeStart:'15:10',timeEnd:'16:10',title:'大教堂博物馆',desc:'位于教堂背后。镇馆之宝：米开朗基罗《哀悼基督》真迹+原版天堂之门金板',locationName:'大教堂博物馆'},
+      {timeStart:'16:15',timeEnd:'16:35',title:'共和广场',desc:'快速路过，拍旋转木马和拱廊',locationName:'共和广场'},
+      {timeStart:'16:35',timeEnd:'16:55',title:'领主广场',desc:'看大卫复制品、海神喷泉、旧宫外观',locationName:'领主广场'},
+      {timeStart:'16:55',timeEnd:'17:15',title:'老桥（Ponte Vecchio）',desc:'快速穿过珠宝廊桥，在桥中央拍阿诺河照片',locationName:'老桥'},
+      {timeStart:'17:15',timeEnd:'17:30',title:'步行至公交站',desc:'从老桥南端步行约5分钟到Lungarno Serristori公交站',locationName:'老桥'},
+      {timeStart:'17:30',timeEnd:'17:45',title:'坐公交上山（12路或13路）',desc:'坐到Piazzale Michelangelo站，车程约10-15分钟。提前在烟草店买票€1.5',locationName:'米开朗基罗广场'},
+      {timeStart:'17:45',timeEnd:'19:00',title:'🌅 米开朗基罗广场看日落',desc:'观景台俯瞰全城。10月5日日落约18:45-19:00，见证天光从金色→粉橘→深蓝的渐变',locationName:'米开朗基罗广场'},
+      {timeStart:'19:00',timeEnd:'19:15',title:'坐公交下山（12路或13路）',desc:'坐到Piazza Stazione中央车站附近下车。天黑后车次减少，建议19:15前到站等车',locationName:'佛罗伦萨SMN火车站'},
+      {timeStart:'19:30',timeEnd:'20:45',title:'晚餐',desc:'若中午没吃成Zaza今晚补上；或选Osteria dell\'Enoteca。务必提前订位！',locationName:'Trattoria Zaza'},
+      {timeStart:'20:45',timeEnd:'21:00',title:'回酒店休息',desc:'明天行程较满，保证睡眠',locationName:'老桥'},
+    ]},
+  { id:11, date:'2026-10-06', dow:'周二', city:'佛罗伦萨→罗马', transport:'步行/高铁', accommodation:'罗马Termini附近酒店',
+    notes:'退房后先寄存行李！乌菲兹需出示预约PDF+护照原件（必查！实名制）。务必当晚住罗马为次日赶机',
+    memo:'学院美术馆需提前预约。行李寄存：酒店前台免费 / 车站Deposito Bagagli €6/件/天（06:00-23:00）。可租乌菲兹语音导览€6',
+    activities:[
+      {timeStart:'08:00',timeEnd:'08:30',title:'起床、洗漱、退房',desc:'收拾全部行李，带齐所有随身物品，不再回佛罗伦萨的酒店',locationName:'老桥'},
+      {timeStart:'08:30',timeEnd:'09:00',title:'寄存行李',desc:'优先：酒店前台（免费寄存）；备选：中央车站地下一层Deposito Bagagli（€6/件/天，06:00-23:00营业）',locationName:'佛罗伦萨SMN火车站'},
+      {timeStart:'09:00',timeEnd:'10:25',title:'悠闲早晨',desc:'慢悠悠喝杯意式咖啡吃个可颂，享受佛罗伦萨的清晨',locationName:'共和广场'},
+      {timeStart:'10:25',timeEnd:'10:40',title:'到达乌菲兹，排队入场',desc:'走到1号入口（预约专用通道），出示预约PDF+护照原件（必查！实名制）',locationName:'乌菲兹美术馆'},
+      {timeStart:'10:45',timeEnd:'13:45',title:'乌菲兹美术馆（3小时）',desc:'入场后直奔2楼波提切利展厅，独享《维纳斯的诞生》和《春》。随后看达芬奇、拉斐尔、卡拉瓦乔名作。可租语音导览€6',locationName:'乌菲兹美术馆'},
+      {timeStart:'13:45',timeEnd:'14:45',title:'悠闲午餐',desc:'时间充裕，坐下来吃顿正经午餐！推荐领主广场周边餐厅，或回中央市场吃牛肚包（如果昨天没吃）',locationName:'领主广场'},
+      {timeStart:'14:45',timeEnd:'15:40',title:'自由活动',desc:'先去共和广场吃Maritozzo奶油面包（Caffè Pasticceria Gilli），再散步逛逛托纳布奥尼奢侈品大街拍照',locationName:'共和广场'},
+      {timeStart:'15:40',timeEnd:'16:00',title:'步行前往学院美术馆',desc:'约20分钟，记得先寄存大包（馆内免费）',locationName:'学院美术馆'},
+      {timeStart:'16:00',timeEnd:'17:30',title:'学院美术馆（1.5小时）',desc:'直奔正中央看米开朗基罗《大卫》真迹！还可看《奴隶》未完成雕像和乐器展厅（含斯特拉迪瓦里小提琴）',locationName:'学院美术馆'},
+      {timeStart:'17:30',timeEnd:'18:00',title:'取包、取行李',desc:'出馆后步行回酒店/寄存处取回全部行李（约20-30分钟）',locationName:'佛罗伦萨SMN火车站'},
+      {timeStart:'18:00',timeEnd:'18:30',title:'前往中央车站（SMN）',desc:'行李多就打车（€8-10约10分钟）；行李少可步行（约25分钟）',locationName:'佛罗伦萨SMN火车站'},
+      {timeStart:'18:30',timeEnd:'19:30',title:'车站候车/晚餐',desc:'在车站内或周边简单吃个晚餐，买点车上零食和水',locationName:'佛罗伦萨SMN火车站'},
+      {timeStart:'19:30',timeEnd:'20:00',title:'检票上车',desc:'大屏幕查看站台，提前15分钟检票',locationName:'佛罗伦萨SMN火车站'},
+      {timeStart:'20:00',timeEnd:'21:30',title:'火车前往罗马Termini',desc:'乘坐高速列车（Frecciarossa/Italo）约1.5小时。抵达Roma Termini罗马中央火车站',locationName:'罗马Termini火车站'},
+      {timeStart:'21:30',timeEnd:'22:00',title:'入住罗马酒店',desc:'出站后步行至Termini车站附近酒店办理入住（建议提前预订车站步行10分钟内的酒店）',locationName:'罗马Termini火车站'},
+      {timeStart:'22:00',timeEnd:'22:30',title:'休息',desc:'第二天早起赶飞机，保证睡眠',locationName:'罗马Termini火车站'},
+    ]},
+  { id:12, date:'2026-10-07', dow:'周三', city:'罗马（返程）', transport:'Leonardo Express', accommodation:'—', notes:'至少提前3小时到机场',
+    activities:[
+      {timeStart:'07:00',timeEnd:'08:00',title:'酒店退房',desc:'',locationName:'罗马Termini火车站'},
+      {timeStart:'08:00',timeEnd:'08:32',title:'Termini→机场',desc:'Leonardo Express 32分钟，€14',locationName:'罗马FCO机场'},
+      {timeStart:'08:40',timeEnd:'12:00',title:'抵达FCO机场',desc:'至少提前3小时',locationName:'罗马FCO机场'},
+    ]},
+];
+
+/* ================================================================
+   DATA: Tasks & Expenses
+   ================================================================ */
+const INITIAL_TASKS = [
+  { id:1, title:'斗兽场抢票', category:'抢票预订', assignee:4, dueDate:'2026-08-27', priority:'high', status:'todo', desc:'北京时间8月27日14:30抢票，18欧/人' },
+  { id:2, title:'博尔盖塞美术馆预约', category:'抢票预订', assignee:5, dueDate:'2026-08-28', priority:'high', status:'todo', desc:'8月初或8月28日15:00放票' },
+  { id:3, title:'梵蒂冈博物馆预约', category:'抢票预订', assignee:4, dueDate:'2026-09-01', priority:'high', status:'todo', desc:'已预约15:30' },
+  { id:4, title:'圣母百花大教堂预约', category:'抢票预订', assignee:6, dueDate:'2026-09-01', priority:'medium', status:'todo', desc:'9月1日和9月10日左右预约' },
+  { id:5, title:'乌菲兹美术馆预约', category:'抢票预订', assignee:6, dueDate:'2026-09-12', priority:'high', status:'todo', desc:'需提前两周线上预约' },
+  { id:6, title:'学院美术馆预约', category:'抢票预订', assignee:6, dueDate:'2026-09-10', priority:'medium', status:'todo', desc:'9月10日左右预约' },
+  { id:7, title:'Trattoria Zaza餐厅预约', category:'抢票预订', assignee:6, dueDate:'2026-09-20', priority:'low', status:'todo', desc:'' },
+  { id:8, title:'索伦托住宿预订', category:'抢票预订', assignee:2, dueDate:'2026-08-15', priority:'high', status:'todo', desc:'目前未订' },
+  { id:9, title:'租车预订', category:'抢票预订', assignee:3, dueDate:'2026-08-20', priority:'high', status:'todo', desc:'罗马取车，佛罗伦萨还车' },
+  { id:10, title:'波西塔诺返程渡轮票', category:'交通提醒', assignee:1, dueDate:'2026-09-28', priority:'high', status:'todo', desc:'务必提前买好' },
+  { id:11, title:'卡普里岛轮渡票', category:'交通提醒', assignee:1, dueDate:'2026-09-28', priority:'medium', status:'todo', desc:'Ferryhopper提前1天订' },
+  { id:12, title:'那不勒斯→罗马火车票', category:'交通提醒', assignee:3, dueDate:'2026-09-01', priority:'medium', status:'todo', desc:'可蹲打折期' },
+  { id:13, title:'护照有效期检查', category:'打包清单', assignee:5, dueDate:'2026-09-15', priority:'medium', status:'doing', desc:'' },
+  { id:14, title:'签证办理', category:'打包清单', assignee:4, dueDate:'2026-08-30', priority:'high', status:'doing', desc:'申根签证' },
+  { id:15, title:'欧元现金兑换', category:'打包清单', assignee:2, dueDate:'2026-09-20', priority:'medium', status:'todo', desc:'建议每人300-500欧' },
+  { id:16, title:'转换插头', category:'打包清单', assignee:5, dueDate:'2026-09-25', priority:'low', status:'todo', desc:'意标插头' },
+  { id:17, title:'特拉斯提弗列区晚餐攻略', category:'美食推荐', assignee:4, dueDate:'', priority:'low', status:'todo', desc:'罗马本地美食区' },
+  { id:18, title:'Terrazze Celè悬崖餐厅', category:'美食推荐', assignee:1, dueDate:'', priority:'medium', status:'todo', desc:'波西塔诺，提前谷歌地图预约' },
+];
+
+const INITIAL_EXPENSES = [];
+
+const INITIAL_PACKING = [
+  {id:1,category:'证件',item:'护照（含签证页复印件）',checked:false,assignee:0,note:''},{id:2,category:'证件',item:'身份证',checked:false,assignee:0,note:''},
+  {id:3,category:'证件',item:'行程单/酒店预订单（打印版）',checked:false,assignee:0,note:''},{id:4,category:'证件',item:'保险单（打印版）',checked:false,assignee:0,note:''},
+  {id:5,category:'证件',item:'2寸证件照（备用）',checked:false,assignee:0,note:''},{id:6,category:'衣物',item:'T恤 ×5',checked:false,assignee:0,note:''},
+  {id:7,category:'衣物',item:'长裤/牛仔裤 ×3',checked:false,assignee:0,note:''},{id:8,category:'衣物',item:'薄外套/开衫',checked:false,assignee:0,note:'早晚温差大'},
+  {id:9,category:'衣物',item:'舒适步行鞋',checked:false,assignee:0,note:'罗马石板路多'},{id:10,category:'衣物',item:'睡衣',checked:false,assignee:0,note:''},
+  {id:11,category:'衣物',item:'泳衣/泳裤',checked:false,assignee:0,note:'卡普里岛海滩'},{id:12,category:'衣物',item:'防晒帽/墨镜',checked:false,assignee:0,note:''},
+  {id:13,category:'电子',item:'手机+充电线',checked:false,assignee:0,note:''},{id:14,category:'电子',item:'转换插头（意标）',checked:false,assignee:0,note:'三孔细脚'},
+  {id:15,category:'电子',item:'充电宝（≤20000mAh）',checked:false,assignee:0,note:''},{id:16,category:'电子',item:'耳机',checked:false,assignee:0,note:''},
+  {id:17,category:'洗漱',item:'牙刷/牙膏',checked:false,assignee:0,note:''},{id:18,category:'洗漱',item:'毛巾',checked:false,assignee:0,note:''},
+  {id:19,category:'洗漱',item:'防晒霜',checked:false,assignee:0,note:''},{id:20,category:'洗漱',item:'护肤品（旅行装）',checked:false,assignee:0,note:''},
+  {id:21,category:'药品',item:'感冒药/退烧药',checked:false,assignee:0,note:''},{id:22,category:'药品',item:'肠胃药/止泻药',checked:false,assignee:0,note:''},
+  {id:23,category:'药品',item:'创可贴',checked:false,assignee:0,note:''},{id:24,category:'药品',item:'晕车药',checked:false,assignee:0,note:'托斯卡纳山路'},
+  {id:25,category:'其他',item:'欧元现金（建议€300-500）',checked:false,assignee:0,note:''},{id:26,category:'其他',item:'Visa/Master信用卡',checked:false,assignee:0,note:''},
+  {id:27,category:'其他',item:'折叠伞',checked:false,assignee:0,note:''},{id:28,category:'其他',item:'U型枕/眼罩',checked:false,assignee:0,note:'长途飞行'},
+  {id:29,category:'其他',item:'零食/泡面',checked:false,assignee:0,note:'备用口粮'},{id:30,category:'其他',item:'防盗腰包',checked:false,assignee:0,note:'意大利小偷多'},
+];
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let eurToCny = 7.8;
+
+const WEATHER_CITIES = {
+  '罗马': { lat: 41.9028, lon: 12.4964 },
+  '索伦托': { lat: 40.6263, lon: 14.3758 },
+  '卡普里岛': { lat: 40.5532, lon: 14.2222 },
+  '卡普里': { lat: 40.5532, lon: 14.2222 },
+  '波西塔诺': { lat: 40.6281, lon: 14.4840 },
+  '波西塔诺+阿马尔菲': { lat: 40.6340, lon: 14.6027 },
+  '托斯卡纳': { lat: 43.7711, lon: 11.2486 },
+  '托斯卡纳-佛罗伦萨': { lat: 43.7711, lon: 11.2486 },
+  '佛罗伦萨': { lat: 43.7696, lon: 11.2558 },
+  '佛罗伦萨→罗马': { lat: 43.7696, lon: 11.2558 },
+  '罗马（返程）': { lat: 41.9028, lon: 12.4964 },
+};
+
+let weatherCache = null;
+let weatherLoading = false;
+
+let state = {
+  itinerary: JSON.parse(JSON.stringify(INITIAL_ITINERARY)),
+  tasks: JSON.parse(JSON.stringify(INITIAL_TASKS)),
+  expenses: JSON.parse(JSON.stringify(INITIAL_EXPENSES)),
+  packing: JSON.parse(JSON.stringify(INITIAL_PACKING)),
+  activities: [],
+  currentUser: 4,
+  currentView: 'dashboard',
+  expandedDays: new Set([1]),
+  mapDayFilter: 'all',
+  activityFilter: 'all',
+};
+
+/* ================================================================
+   PERSISTENCE
+   ================================================================ */
+
+// —— Day 10 & 11 (10月5-6日) 行程迁移 ——
+// 签名检测式迁移：无论数据来自 localStorage 还是 Supabase 实时同步，
+// 只要检测到不是最新版行程（缺少特征活动），就自动用 INITIAL_ITINERARY 覆盖修复。
+// 已迁移的数据（含特征活动）不会被覆盖，用户后续编辑得以保留。
+function isD10D11Stale(it) {
+  if (!it || !it[9] || !it[10]) return false;
+  const a = it[9].activities || [];
+  const b = it[10].activities || [];
+  const sig10 = a.some(x => x.title === '教堂大殿（免费）' && x.timeStart === '10:15');
+  const sig11 = b.some(x => x.title === '乌菲兹美术馆（3小时）' && x.timeStart === '10:45');
+  return !(sig10 && sig11);
+}
+function migrateItineraryD10D11() {
+  if (!state.itinerary || state.itinerary.length < 11) return false;
+  if (!isD10D11Stale(state.itinerary)) return false;
+  state.itinerary[9] = JSON.parse(JSON.stringify(INITIAL_ITINERARY[9]));
+  state.itinerary[10] = JSON.parse(JSON.stringify(INITIAL_ITINERARY[10]));
+  return true;
+}
+function persistState() {
+  try { localStorage.setItem('italy-trip-v2', JSON.stringify({
+    tasks: state.tasks, expenses: state.expenses, packing: state.packing, activities: state.activities,
+    itinerary: state.itinerary, currentUser: state.currentUser,
+    expandedDays: [...state.expandedDays], currentView: state.currentView,
+    activityFilter: state.activityFilter,
+  })); } catch(e) {}
+}
+
+function saveState() {
+  try {
+    const d = {
+      tasks: state.tasks, expenses: state.expenses, packing: state.packing, activities: state.activities,
+      itinerary: state.itinerary, currentUser: state.currentUser,
+      expandedDays: [...state.expandedDays], currentView: state.currentView,
+      activityFilter: state.activityFilter,
+    };
+    localStorage.setItem('italy-trip-v2', JSON.stringify(d));
+    // Push to Supabase
+    pushToSupabase();
+  } catch(e) {}
+}
+function loadState() {
+  try {
+    const s = localStorage.getItem('italy-trip-v2');
+    if (s) {
+      const d = JSON.parse(s);
+      // Only overwrite if saved arrays actually have content; otherwise keep INITIAL_* defaults
+      if (d.tasks && d.tasks.length) state.tasks = d.tasks;
+      if (d.expenses && d.expenses.length) state.expenses = d.expenses;
+      if (d.packing && d.packing.length) state.packing = d.packing;
+      if (d.activities && d.activities.length) state.activities = d.activities;
+      if (d.itinerary && d.itinerary.length) state.itinerary = d.itinerary;
+      // Keep structural city names in sync with code defaults (preserve user edits to activities/notes)
+      state.itinerary.forEach((day, i) => {
+        if (INITIAL_ITINERARY[i] && INITIAL_ITINERARY[i].city) {
+          day.city = INITIAL_ITINERARY[i].city;
+        }
+      });
+      // Migration: force-update Day 10 & 11 itinerary (Oct 5-6 Florence/Rome revised schedule)
+      // Signature-based: re-runs whenever stale data is detected (localStorage / Supabase / realtime)
+      const migratedD10D11 = migrateItineraryD10D11();
+      if (migratedD10D11) {
+        persistState();
+        // Push corrected itinerary to Supabase so other devices / realtime get fixed too
+        try { pushToSupabase(); } catch(e) {}
+      }
+      if (d.currentUser) state.currentUser = d.currentUser;
+      if (d.expandedDays) state.expandedDays = new Set(d.expandedDays);
+      if (d.activityFilter) state.activityFilter = d.activityFilter;
+    }
+  } catch(e) {
+    console.log('loadState error', e);
+  }
+}
+
+/* ================================================================
+   UTILS
+   ================================================================ */
+function getMember(id) { return MEMBERS.find(m=>m.id===id) || MEMBERS[0] }
+function memberOptLabel(m){
+  const isHtml = typeof m.avatar==='string' && m.avatar.startsWith('<');
+  if (isHtml) {
+    if (m.name === '李心怡') return '🐱 ' + m.name;
+    if (m.name === '严泽淳') return '☁️ ' + m.name;
+    if (m.name === '单婧怡') return '🦊 ' + m.name;
+    if (m.name === '刘意') return '🐼 ' + m.name;
+    return '👤 ' + m.name;
+  }
+  return m.avatar + ' ' + m.name;
+}
+function fmtDate(d) { const dt=new Date(d); return dt.getMonth()+1+'月'+dt.getDate()+'日' }
+function fmtDateFull(d) { const dt=new Date(d); return dt.getFullYear()+'.'+String(dt.getMonth()+1).padStart(2,'0')+'.'+String(dt.getDate()).padStart(2,'0') }
+function fmtTimeAgo(ts) { const diff=Date.now()-ts; if(diff<6e4)return'刚刚';if(diff<36e5)return Math.floor(diff/6e4)+'分钟前';if(diff<864e5)return Math.floor(diff/36e5)+'小时前';return Math.floor(diff/864e5)+'天前' }
+function esc(s) { return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'' }
+function toCNY(a,c) { return c==='EUR'?a*eurToCny:a }
+function weatherIcon(code) {
+  if (code === 0) return '☀️';
+  if ([1,2,3].includes(code)) return '⛅';
+  if ([45,48].includes(code)) return '🌫️';
+  if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return '🌧️';
+  if ([71,73,75,77,85,86].includes(code)) return '❄️';
+  if ([95,96,99].includes(code)) return '⛈️';
+  return '☁️';
+}
+async function fetchItineraryWeather() {
+  if (weatherLoading) return;
+  weatherLoading = true;
+  const days = state.itinerary
+    .map(d => ({ date: d.date, city: d.city.replace(/（返程）/g, '').replace(/→.*$/g, '').replace(/\+.*$/g, '') }))
+    .filter((d, i, arr) => arr.findIndex(x => x.date === d.date && x.city === d.city) === i);
+  const results = [];
+  for (const day of days) {
+    const loc = WEATHER_CITIES[day.city] || WEATHER_CITIES['罗马'];
+    try {
+      const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Europe/Rome&forecast_days=16&start_date=${day.date}&end_date=${day.date}`);
+      const data = await resp.json();
+      if (data.daily && data.daily.time && data.daily.time.length > 0) {
+        results.push({
+          date: day.date,
+          city: day.city,
+          max: Math.round(data.daily.temperature_2m_max[0]),
+          min: Math.round(data.daily.temperature_2m_min[0]),
+          code: data.daily.weathercode[0]
+        });
+      }
+    } catch(e) {}
+  }
+  weatherCache = results;
+  weatherLoading = false;
+  const el = document.getElementById('content');
+  if (el && state.currentView === 'dashboard') renderDashboard(el);
+}
+function nextId(arr) { return Math.max(0,...arr.map(x=>x.id))+1 }
+function showToast(m) { const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200) }
+function logActivity(a) { state.activities.unshift({id:Date.now(),userId:state.currentUser,action:a,time:Date.now()});if(state.activities.length>50)state.activities.pop() }
+function lookupLocation(name) { if(!name) return null; const l=LOCATION_DB.find(x=>x.name===name); if(l) return l; const q=name.toLowerCase(); return LOCATION_DB.find(x=>x.name.toLowerCase().includes(q)||q.includes(x.name.toLowerCase()))||null }
+function getCityColor(city) {
+  for(const [k,v] of Object.entries(CITY_COLORS)) { if(city.includes(k)) return v.color }
+  return '#A89B8C';
+}
+
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+const VIEW_CFG = {
+  dashboard:{title:'概览仪表盘',desc:'行程总览与实时动态'},
+  itinerary:{title:'行程攻略',desc:'12天逐日行程 · 全部内容可编辑'},
+  map:{title:'地图路线',desc:'交互式地图 · 按天查看路线 · 地点自动标记'},
+  tasks:{title:'备忘待办',desc:'抢票预订 · 打包清单 · 交通提醒 · 美食推荐'},
+  packing:{title:'行李准备',desc:'出行必备清单 · 按人分配 · 逐项打勾'},
+  expenses:{title:'记账本',desc:'公用/个人费用分离 · 自动AA分摊'},
+  members:{title:'团队成员',desc:'6人协作 · 按行程分工'},
+  activity:{title:'协同记录',desc:'所有人的操作历史 · 按人筛选'},
+};
+
+function switchView(v) {
+  state.currentView = v; document.querySelectorAll('.nav-item').forEach(e=>e.classList.toggle('active',e.dataset.view===v));
+  const c=VIEW_CFG[v]; document.getElementById('page-title').textContent=c.title; document.getElementById('page-desc').textContent=c.desc;
+  const h=document.getElementById('header-actions'), el=document.getElementById('content'); h.innerHTML='';
+  switch(v){
+    case'dashboard':renderDashboard(el);break;
+    case'itinerary':h.innerHTML='<button class="btn btn-primary btn-sm" onclick="openActivityModal()">+ 添加活动</button>';renderItinerary(el);break;
+    case'map':renderMapPage(el);break;
+    case'tasks':h.innerHTML='<button class="btn btn-primary btn-sm" onclick="openTaskModal()">+ 新建待办</button>';renderTasks(el);break;
+    case'packing':h.innerHTML='<button class="btn btn-primary btn-sm" onclick="openPackingModal()">+ 添加行李项</button>';renderPacking(el);break;
+    case'expenses':h.innerHTML='<button class="btn btn-primary btn-sm" onclick="openExpenseModal()">+ 记一笔账</button>';renderExpenses(el);break;
+    case'members':renderMembers(el);break;
+    case'activity':renderActivityLog(el);break;
+  }
+  if(v!=='map'&&mapInstance){mapInstance.remove();mapInstance=null}
+}
+
+function toggleSidebar() {
+  const sb=document.getElementById('sidebar'), ov=document.getElementById('sidebar-overlay'), hb=document.getElementById('hamburger');
+  sb.classList.toggle('open'); ov.classList.toggle('active');
+  if(sb.classList.contains('open')){ hb.textContent='✕'; hb.style.left='176px'; }
+  else{ hb.textContent='☰'; hb.style.left='14px'; }
+}
+
+/* ================================================================
+   DASHBOARD
+   ================================================================ */
+function renderDashboard(el) {
+  const ts=new Date('2026-09-26'), dl=Math.ceil((ts-Date.now())/(864e5));
+  const publicExp=state.expenses.filter(e=>e.isShared), privateExp=state.expenses.filter(e=>!e.isShared);
+  const totalCNY=state.expenses.reduce((s,e)=>s+toCNY(e.amount,e.currency),0);
+  const totalAA=publicExp.reduce((s,e)=>s+toCNY(e.amount,e.currency),0);
+  const perShare=totalAA/6;
+  const totalAtt=state.itinerary.reduce((s,d)=>s+d.activities.length,0);
+  const pendingT=state.tasks.filter(t=>t.status!=='done').length;
+  const cities=[...new Set(state.itinerary.map(d=>d.city.split('→').pop().split('+').pop().trim()))];
+
+  el.innerHTML=`
+    <div style="margin-bottom:24px;">
+      <div style="display:flex;gap:16px;align-items:center;background:linear-gradient(135deg,#D9622E,#C5283D);color:#fff;border-radius:16px;padding:28px;position:relative;overflow:hidden;" class="dash-hero">
+        <div style="flex:1;">
+          <div style="font-size:13px;opacity:.85;margin-bottom:4px;">即将出发 · 6人同行</div>
+          <div style="font-size:32px;font-weight:800;margin-bottom:6px;">意大利12日深度游</div>
+          <div style="font-size:14px;opacity:.9;">罗马 → 索伦托 → 卡普里 → 波西塔诺 → 托斯卡纳 → 佛罗伦萨 → 罗马</div>
+          <div class="hero-bottom-row" style="margin-top:12px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+            <div class="hero-stats" style="display:flex;gap:16px;font-size:13px;opacity:.85;">
+              <span>📅 2026.09.26 — 10.07</span>
+              <span>👥 ${state.expenses.length}笔记账</span>
+              <span>📍 ${cities.length}个城市</span>
+            </div>
+            <div class="hero-countdown-inline" style="text-align:center;background:rgba(255,255,255,.15);border-radius:10px;padding:8px 14px;flex-shrink:0;">
+              <div style="font-size:24px;font-weight:800;line-height:1.1;">${dl>0?dl:'出发!'}</div>
+              <div style="font-size:11px;opacity:.85;">${dl>0?'天后出发':'旅途愉快'}</div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-countdown-desktop" style="text-align:center;background:rgba(255,255,255,.15);border-radius:14px;padding:16px 24px;backdrop-filter:blur(10px);">
+          <div style="font-size:42px;font-weight:800;">${dl>0?dl:'出发!'}</div>
+          <div style="font-size:13px;opacity:.85;">${dl>0?'天后出发':'旅途愉快'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-4" style="margin-bottom:24px;">
+      <div class="stat-card"><div class="stat-icon" style="background:var(--c-primary-light);">📅</div><div><div class="stat-value">12</div><div class="stat-label">行程天数</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--c-secondary-light);">📍</div><div><div class="stat-value">${totalAtt}</div><div class="stat-label">已规划景点</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FEF3C7;">💰</div><div><div class="stat-value">¥${(totalCNY/1000).toFixed(1)}k</div><div class="stat-label">总消费</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FDE8E0;">✅</div><div><div class="stat-value">${pendingT}</div><div class="stat-label">待办任务</div></div></div>
+    </div>
+
+    ${(()=>{
+      if (!weatherCache) return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报</div><div style="padding:20px;text-align:center;color:var(--c-text-light);font-size:13px;">正在获取沿途城市天气…</div></div>`;
+      if (weatherCache.length === 0) return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报</div><div style="padding:20px;text-align:center;color:var(--c-text-light);font-size:13px;">暂无可用预报（出行日期较远，Open-Meteo 最长支持未来 16 天）</div></div>`;
+      return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报 <span style="font-weight:400;color:var(--c-text-light);font-size:12px;">(数据来源 Open-Meteo)</span></div>
+      <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;">
+        ${weatherCache.map(w=>`
+          <div style="flex:0 0 90px;text-align:center;padding:12px 8px;background:var(--c-surface-alt);border-radius:12px;">
+            <div style="font-size:11px;color:var(--c-text-light);margin-bottom:4px;">${fmtDate(w.date)}</div>
+            <div style="font-size:11px;font-weight:600;color:var(--c-text-secondary);margin-bottom:6px;">${w.city}</div>
+            <div style="font-size:28px;margin-bottom:4px;">${weatherIcon(w.code)}</div>
+            <div style="font-size:13px;font-weight:700;">${w.max}° / ${w.min}°</div>
+          </div>
+        `).join('')}
+      </div></div>`;
+    })()}
+
+    ${(()=>{
+      const pending = state.tasks.filter(t=>t.status!=='done').sort((a,b)=>{
+        if(!a.dueDate) return 1; if(!b.dueDate) return -1;
+        return a.dueDate.localeCompare(b.dueDate);
+      });
+      const priColor = {high:'#C5283D',medium:'#D97706',low:'#6B7280'};
+      return pending.length>0 ? `
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">📋 待办事项 <span style="font-weight:400;color:var(--c-text-light);font-size:12px;">(按截止时间)</span></div>
+      <div style="max-height:180px;overflow-y:auto;padding-right:4px;">
+        ${pending.map(t=>{
+          const m = getMember(t.assignee);
+          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--c-bg);font-size:12px;white-space:nowrap;">
+            <span style="width:6px;height:6px;border-radius:50%;background:${priColor[t.priority]||'#999'};flex-shrink:0;" title="${t.priority}"></span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${t.title}</span>
+            ${t.dueDate?`<span style="color:var(--c-text-light);flex-shrink:0;font-size:11px;">📅 ${t.dueDate}</span>`:''}
+            <span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${m.color}20;color:${m.color};flex-shrink:0;">${m.name}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+    })()}
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">👥 团队成员</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${MEMBERS.map(m=>`<div style="text-align:center;min-width:64px;"><div style="width:42px;height:42px;border-radius:50%;background:${m.color}20;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 4px;border:2px solid ${m.color};">${m.avatar}</div><div style="font-size:11px;font-weight:600;">${m.name}</div><div style="font-size:10px;color:var(--c-text-secondary);max-width:72px;">${m.duty}</div></div>`).join('')}</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 费用概览</div>
+        <div style="text-align:center;padding:10px 0;">
+          <div style="font-size:36px;font-weight:800;color:var(--c-primary);">¥${totalCNY.toFixed(0)}</div>
+          <div style="font-size:13px;color:var(--c-text-secondary);margin-top:4px;">${publicExp.length}笔公用 · ${privateExp.length}笔个人</div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;"><div style="flex:1;text-align:center;padding:8px;background:#DCFCE7;border-radius:8px;"><div style="font-size:12px;color:#16A34A;font-weight:600;">公用AA</div><div style="font-size:18px;font-weight:700;">¥${totalAA.toFixed(0)}</div><div style="font-size:10px;color:var(--c-text-secondary);">人均¥${perShare.toFixed(0)}</div></div><div style="flex:1;text-align:center;padding:8px;background:#FEF3C7;border-radius:8px;"><div style="font-size:12px;color:#D97706;font-weight:600;">个人</div><div style="font-size:18px;font-weight:700;">¥${(totalCNY-totalAA).toFixed(0)}</div><div style="font-size:10px;color:var(--c-text-secondary);">各自承担</div></div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title">🔔 最新动态</div>
+      ${state.activities.length===0?'<div class="empty-state"><div class="es-icon">✨</div>开始使用工作台，你的操作会出现在这里</div>':state.activities.slice(0,8).map(a=>{const m=getMember(a.userId);return`<div class="activity-item"><div class="ai-avatar" style="background:${m.color}20;border:1.5px solid ${m.color};">${m.avatar}</div><div class="ai-content"><strong>${m.name}</strong> ${esc(a.action)}<div class="ai-time">${fmtTimeAgo(a.time)}</div></div></div>`}).join('')}
+    </div>
+  `;
+}
+
+/* ================================================================
+   ITINERARY (fully editable)
+   ================================================================ */
+function renderItinerary(el) {
+  el.innerHTML=`
+    <div style="margin-bottom:16px;display:flex;gap:10px;">
+      <button class="btn btn-outline btn-sm" onclick="expandAllDays()">展开全部</button>
+      <button class="btn btn-outline btn-sm" onclick="collapseAllDays()">折叠全部</button>
+    </div>
+    ${state.itinerary.map(d=>renderDayCard(d)).join('')}
+  `;
+  // Load timeline images from IndexedDB
+  loadTimelineImages();
+}
+
+function renderDayCard(day) {
+  const city = day.city.split('→')[0].split('+')[0].trim();
+  const ci = CITY_COLORS[city] || CITY_COLORS['罗马'];
+  const exp = state.expandedDays.has(day.id);
+
+  return `<div class="day-card ${exp?'expanded':''}" id="day-${day.id}">
+    <div class="day-header" onclick="toggleDay(${day.id})">
+      <div class="day-number" style="background:${ci.color};"><div class="dn">D${day.id}</div><div class="dl">${day.dow}</div></div>
+      <div class="day-info">
+        <div class="day-city">${day.city} <span class="tag ${ci.tag}" style="margin-left:6px;">${fmtDate(day.date)}</span>${day.notes?`<span style="font-size:11px;margin-left:6px;color:#E07B3C;" title="有提醒">⚠️</span>`:''}${day.memo?`<span style="font-size:11px;margin-left:4px;color:#D97706;" title="有备注">📝</span>`:''}</div>
+        <div class="day-meta">
+          <span>🚗 <span class="inline-edit" onclick="event.stopPropagation();editDayField(${day.id},'transport')" title="点击编辑">${esc(day.transport||'—')}</span></span>
+          <span>🏨 <span class="inline-edit" onclick="event.stopPropagation();editDayField(${day.id},'accommodation')" title="点击编辑">${esc((day.accommodation||'—').substring(0,30))}${(day.accommodation||'').length>30?'…':''}</span></span>
+          <span>📍 ${day.activities.length}个活动</span>
+        </div>
+      </div>
+      <span class="day-toggle">▼</span>
+    </div>
+    <div class="day-body">
+      ${day.notes?`<div style="background:#FEF3C7;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400E;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><span>⚠️ 提醒：<span class="inline-edit" onclick="editDayField(${day.id},'notes')" style="font-size:13px;">${esc(day.notes)}</span></span><button class="btn btn-outline btn-sm" style="padding:2px 6px;font-size:11px;" onclick="event.stopPropagation();editDayField(${day.id},'notes')">编辑</button></div>`:'<div style="margin-bottom:10px;padding:8px 12px;background:var(--c-surface-alt);border-radius:8px;border:1px dashed var(--c-border);"><span class="inline-edit" style="font-size:12px;color:var(--c-primary);cursor:pointer;" onclick="editDayField(${day.id},&#39;notes&#39;)">+ 添加提醒</span></div>'}
+      ${day.memo?`<div style="background:#EFF6FF;border-radius:8px;padding:10px 14px;font-size:12px;color:#1E40AF;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;"><span>📝 备注：<span class="inline-edit" onclick="editDayField(${day.id},'memo')" style="font-size:13px;">${esc(day.memo)}</span></span><button class="btn btn-outline btn-sm" style="padding:2px 6px;font-size:11px;" onclick="event.stopPropagation();editDayField(${day.id},'memo')">编辑</button></div>`:'<div style="margin-bottom:12px;padding:8px 12px;background:var(--c-surface-alt);border-radius:8px;border:1px dashed var(--c-border);"><span class="inline-edit" style="font-size:12px;color:var(--c-primary);cursor:pointer;" onclick="editDayField(${day.id},&#39;memo&#39;)">+ 添加备注</span></div>'}
+      <div class="day-section-label">⏰ 行程时间轴</div>
+      <div class="timeline">${day.activities.map((a,idx)=>renderTimelineItem(day,a,idx)).join('')}</div>
+      <div class="day-section-label">📋 详细信息</div>
+      <div class="info-row"><span class="info-label">交通</span><span class="info-value"><span class="inline-edit" onclick="editDayField(${day.id},'transport')">${esc(day.transport||'—')}</span></span></div>
+      <div class="info-row"><span class="info-label">住宿</span><span class="info-value"><span class="inline-edit" onclick="editDayField(${day.id},'accommodation')">${esc(day.accommodation||'—')}</span></span></div>
+      ${day.notes?`<div class="info-row"><span class="info-label">提醒</span><span class="info-value"><span class="inline-edit" onclick="editDayField(${day.id},'notes')">${esc(day.notes)}</span></span></div>`:`<div class="info-row"><span class="info-label">提醒</span><span class="info-value"><span class="inline-edit" style="color:var(--c-primary);" onclick="editDayField(${day.id},'notes')">点击添加</span></span></div>`}
+      ${day.memo?`<div class="info-row"><span class="info-label">备注</span><span class="info-value"><span class="inline-edit" onclick="editDayField(${day.id},'memo')">${esc(day.memo)}</span></span></div>`:`<div class="info-row"><span class="info-label">备注</span><span class="info-value"><span class="inline-edit" style="color:var(--c-primary);" onclick="editDayField(${day.id},'memo')">点击添加</span></span></div>`}
+      <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--c-border);"><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();openActivityModal(${day.id})">+ 添加活动</button></div>
+    </div>
+  </div>`;
+}
+
+function renderTimelineItem(day, act, idx) {
+  const loc = lookupLocation(act.locationName);
+  const timeDisplay = act.timeStart === act.timeEnd ? act.timeStart : `${act.timeStart} - ${act.timeEnd}`;
+  const imgs = (act.images && act.images.length > 0)
+    ? `<div class="timeline-img-row">${act.images.map((imgId, i) =>
+        `<img class="timeline-img" src="" data-imgid="${imgId}" data-day="${day.id}" data-idx="${idx}" data-ii="${i}"
+          onclick="event.stopPropagation();openLightbox(${day.id},${idx},${i})"
+          onerror="this.onerror=null;imgDB.load('${imgId}').then(function(b64){if(b64)this.src=b64}.bind(this))"
+          style="background:var(--c-surface-alt);" title="点击查看大图">`
+      ).join('')}</div>` : '';
+  return `<div class="timeline-item" id="act-${day.id}-${idx}">
+    <div class="timeline-time">${timeDisplay}</div>
+    <div class="timeline-title">${esc(act.title)}</div>
+    ${act.desc?`<div class="timeline-desc">${esc(act.desc)}</div>`:''}
+    ${act.locationName?`<div class="timeline-location">📍 ${esc(act.locationName)}${loc?' ✅':' ⚠️未匹配'}</div>`:''}
+    ${imgs}
+    <div class="timeline-actions">
+      <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openActivityModal(${day.id},${idx})">编辑</button>
+      <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();deleteActivity(${day.id},${idx})">删除</button>
+    </div>
+  </div>`;
+}
+
+function editDayField(dayId, field) {
+  const day = state.itinerary.find(d=>d.id===dayId);
+  const oldVal = day[field] || '';
+  const isNotes = field === 'notes' || field === 'memo';
+  const input = isNotes ? `<textarea id="ef-input" style="width:100%;padding:8px;border:1.5px solid var(--c-primary);border-radius:4px;font-size:13px;font-family:inherit;min-height:60px;">${esc(oldVal)}</textarea>`
+    : `<input id="ef-input" type="text" value="${esc(oldVal)}" style="width:100%;padding:8px;border:1.5px solid var(--c-primary);border-radius:4px;font-size:13px;font-family:inherit;">`;
+  const labelMap = {transport:'交通',accommodation:'住宿',notes:'提醒',memo:'备注'};
+  showModal(`<h3>编辑${labelMap[field]||'字段'}</h3>
+    <div style="font-size:13px;color:var(--c-text-secondary);margin-bottom:10px;">D${dayId} · ${day.city} · ${fmtDate(day.date)}</div>
+    ${input}
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveDayField(${dayId},'${field}')">保存</button></div>`);
+  setTimeout(()=>document.getElementById('ef-input')?.focus(),100);
+}
+
+function saveDayField(dayId, field) {
+  const day = state.itinerary.find(d=>d.id===dayId);
+  const val = document.getElementById('ef-input').value.trim();
+  day[field] = val;
+  const labelMap2 = {transport:'交通',accommodation:'住宿',notes:'提醒',memo:'备注'};
+  logActivity(`编辑了D${dayId}的${labelMap2[field]||field}`);
+  saveState(); closeModal(); renderItinerary(document.getElementById('content'));
+  showToast('保存成功');
+}
+
+function toggleDay(id) {
+  if(state.expandedDays.has(id))state.expandedDays.delete(id);else state.expandedDays.add(id);
+  saveState();renderItinerary(document.getElementById('content'));
+}
+function expandAllDays() { state.itinerary.forEach(d=>state.expandedDays.add(d.id));saveState();renderItinerary(document.getElementById('content')); }
+function collapseAllDays() { state.expandedDays.clear();saveState();renderItinerary(document.getElementById('content')); }
+
+function openActivityModal(dayId, actIdx) {
+  // 如果没有指定 dayId，先让用户选择哪天
+  if(dayId===undefined){
+    showModal(`<h3>选择添加到哪一天</h3>
+      <div style="display:flex;flex-direction:column;gap:6px;max-height:400px;overflow-y:auto;">
+        ${state.itinerary.map(d=>{
+          const city=d.city.split('→')[0].split('+')[0].trim();
+          return`<button class="btn btn-outline" style="justify-content:flex-start;text-align:left;padding:10px 14px;width:100%;" onclick="openActivityModal(${d.id});">D${d.id} · ${city} · ${fmtDate(d.date)}</button>`;
+        }).join('')}
+      </div>
+      <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button></div>`);
+    return;
+  }
+  const day = state.itinerary.find(d=>d.id===dayId);
+  const isEdit = actIdx!==undefined;
+  const act = isEdit?day.activities[actIdx]:{timeStart:'09:00',timeEnd:'10:00',title:'',desc:'',locationName:'',images:[]};
+  window._editingDayId = dayId;
+  window._editingActIdx = isEdit ? actIdx : -1;
+
+  // Prepare image thumbnails HTML (existing + temp)
+  const existingImgs = (act.images||[]).map((imgId,i) => `
+    <div class="img-thumb-wrap" id="img-ex-${i}">
+      <img class="img-thumb" src="" data-imgid="${imgId}" onerror="this.onerror=null;imgDB.load('${imgId}').then(function(b64){if(b64)this.src=b64}.bind(this))" style="background:var(--c-surface-alt);">
+      <button class="img-del" onclick="event.stopPropagation();removeTempImg('ex',${i})">×</button>
+    </div>`).join('');
+
+  showModal(`<h3>${isEdit?'编辑活动':'添加活动'}</h3>
+    <div style="font-size:13px;color:var(--c-text-secondary);margin-bottom:14px;">D${dayId} · ${day.city} · ${fmtDate(day.date)}</div>
+    <div style="display:flex;gap:12px;">
+      <div class="form-group" style="flex:1;"><label>开始时间</label><input type="time" id="act-ts" value="${act.timeStart}" onclick="try{this.showPicker()}catch(e){}"></div>
+      <div class="form-group" style="flex:1;"><label>结束时间</label><input type="time" id="act-te" value="${act.timeEnd}" onclick="try{this.showPicker()}catch(e){}"></div>
+    </div>
+    <div class="form-group"><label>活动名称</label><input type="text" id="act-title" value="${esc(act.title)}" placeholder="如：参观斗兽场"></div>
+    <div class="form-group"><label>描述/备注</label><textarea id="act-desc" placeholder="详细信息...">${esc(act.desc||'')}</textarea></div>
+    <div class="form-group location-search"><label>地点名称（输入后选择匹配地点，自动标注地图）</label>
+      <input type="text" id="act-loc" value="${esc(act.locationName||'')}" placeholder="如：罗马斗兽场" autocomplete="off" oninput="searchLocations()" onfocus="searchLocations()">
+      <div class="location-suggestions" id="act-loc-suggestions"></div>
+    </div>
+    <div class="form-group"><label>📷 活动图片</label>
+      <div class="img-upload-area" id="img-upload-area">
+        ${existingImgs}
+        ${(window._tempImages||[]).map((_,i)=>`<div class="img-thumb-wrap" id="img-tmp-${i}"><img class="img-thumb" src="${window._tempImages[i].dataUrl}"><button class="img-del" onclick="event.stopPropagation();removeTempImg('tmp',${i})">×</button></div>`).join('')}
+        <button class="img-add-btn" onclick="event.preventDefault();document.getElementById('hidden-file-input').click()" title="添加图片">+</button>
+      </div>
+      <div style="font-size:11px;color:var(--c-text-light);margin-top:4px;">支持 JPG/PNG，单张最大 5MB</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveActivity(${dayId},${isEdit?actIdx:'-1'})">保存</button>
+    </div>`);
+
+  // Load existing images from IndexedDB asynchronously
+  if (act.images && act.images.length > 0) {
+    act.images.forEach((imgId, i) => {
+      imgDB.load(imgId).then(b64 => {
+        const el = document.getElementById('img-ex-'+i);
+        if (el) { const img = el.querySelector('img'); if (img && b64) img.src = b64; }
+      }).catch(()=>{});
+    });
+  }
+}
+
+function searchLocations() {
+  const q = document.getElementById('act-loc')?.value?.trim()||'';
+  const dd = document.getElementById('act-loc-suggestions');
+  if(!q) { dd.classList.remove('show');return }
+  const results = LOCATION_DB.filter(l=>l.name.toLowerCase().includes(q.toLowerCase())).slice(0,8);
+  if(results.length===0){dd.classList.remove('show');return}
+  dd.innerHTML = results.map(l=>`<div class="location-suggestion" onclick="selectLocation('act-loc','${esc(l.name).replace(/'/g,"\\'")}')">
+    <div class="ls-name">${l.name}</div><div class="ls-city">${l.city} · ${l.lat.toFixed(4)},${l.lng.toFixed(4)}</div>
+  </div>`).join('');
+  dd.classList.add('show');
+  setTimeout(()=>document.addEventListener('click',function hide(e){if(!e.target.closest('.location-search')){dd.classList.remove('show');document.removeEventListener('click',hide)}},{once:true}));
+}
+
+function selectLocation(inputId, name) {
+  document.getElementById(inputId).value = name;
+  document.getElementById('act-loc-suggestions').classList.remove('show');
+}
+
+/* ----- 图片上传处理 ----- */
+window._tempImages = [];       // [{id, dataUrl}] — pending uploads
+window._removedExisting = [];  // image ids to remove on save
+
+function handleImageFiles(input) {
+  const files = input.files;
+  if (!files || files.length === 0) return;
+  window._tempImages = window._tempImages || [];
+  let processed = 0;
+  Array.from(files).forEach(file => {
+    if (file.size > 5 * 1024 * 1024) { showToast('图片 ' + file.name + ' 超过5MB，已跳过'); processed++; if (processed === files.length) refreshImgSection(); return; }
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const imgId = 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
+      try {
+        await imgDB.save(imgId, e.target.result);
+        window._tempImages.push({ id: imgId, dataUrl: e.target.result });
+      } catch(err) {
+        showToast('图片保存失败，请重试');
+      }
+      processed++;
+      if (processed === files.length) refreshImgSection();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function removeTempImg(type, idx) {
+  if (type === 'tmp') {
+    const removed = window._tempImages.splice(idx, 1);
+    if (removed.length) imgDB.remove(removed[0].id).catch(()=>{});
+  } else if (type === 'ex') {
+    const actId = window._editingDayId + '_' + window._editingActIdx;
+    // Mark existing image for removal
+    window._removedExisting = window._removedExisting || [];
+    const imgArea = document.getElementById('img-upload-area');
+    const wrap = document.getElementById('img-ex-' + idx);
+    if (wrap) { wrap.style.display = 'none'; }
+    // Store the index to filter out on save
+    if (!window._removedExisting.includes(idx)) window._removedExisting.push(idx);
+  }
+}
+
+function refreshImgSection() {
+  const area = document.getElementById('img-upload-area');
+  if (!area) return;
+  const actId = window._editingDayId + '_' + window._editingActIdx;
+  const day = state.itinerary.find(d => d.id === window._editingDayId);
+  const act = (window._editingActIdx >= 0 && day) ? day.activities[window._editingActIdx] : {images:[]};
+  const existingImgs = (act.images||[]).filter((_,i) => !(window._removedExisting||[]).includes(i));
+  area.innerHTML = existingImgs.map((imgId, i) => `
+    <div class="img-thumb-wrap" id="img-ex-${i}">
+      <img class="img-thumb" src="" data-imgid="${imgId}" onerror="this.onerror=null;imgDB.load('${imgId}').then(function(b64){if(b64)this.src=b64}.bind(this))" style="background:var(--c-surface-alt);">
+      <button class="img-del" onclick="event.stopPropagation();removeTempImg('ex',${i})">×</button>
+    </div>`).join('')
+    + (window._tempImages||[]).map((t,i) => `<div class="img-thumb-wrap" id="img-tmp-${i}"><img class="img-thumb" src="${t.dataUrl}"><button class="img-del" onclick="event.stopPropagation();removeTempImg('tmp',${i})">×</button></div>`).join('')
+    + '<button class="img-add-btn" onclick="event.preventDefault();document.getElementById(\'hidden-file-input\').click()" title="添加图片">+</button>';
+  // Re-load existing images
+  existingImgs.forEach((imgId, i) => {
+    imgDB.load(imgId).then(b64 => {
+      const el = document.getElementById('img-ex-'+i);
+      if (el) { const img = el.querySelector('img'); if (img && b64) img.src = b64; }
+    }).catch(()=>{});
+  });
+}
+
+// ===== SAVE ACTIVITY (with images) =====
+function saveActivity(dayId, actIdx) {
+  const day = state.itinerary.find(d=>d.id===dayId);
+  const locName = document.getElementById('act-loc').value.trim();
+  const loc = lookupLocation(locName);
+
+  // Collect image ids: existing (minus removed) + newly uploaded
+  const oldAct = actIdx>=0 ? day.activities[actIdx] : {images:[]};
+  const removedSet = new Set(window._removedExisting||[]);
+  const keptImages = (oldAct.images||[]).filter((_,i) => !removedSet.has(i));
+  const newImages = (window._tempImages||[]).map(t => t.id);
+  const allImages = [...keptImages, ...newImages];
+
+  // Clean up removed images from IndexedDB
+  (oldAct.images||[]).forEach((imgId, i) => {
+    if (removedSet.has(i)) imgDB.remove(imgId).catch(()=>{});
+  });
+
+  const data = {
+    timeStart: document.getElementById('act-ts').value,
+    timeEnd: document.getElementById('act-te').value,
+    title: document.getElementById('act-title').value.trim(),
+    desc: document.getElementById('act-desc').value.trim(),
+    locationName: locName,
+    images: allImages,
+  };
+  if(!data.title){showToast('请填写活动名称');return}
+  if(actIdx>=0){day.activities[actIdx]=data;logActivity(`编辑了D${dayId}的活动"${data.title}"`)}
+  else{day.activities.push(data);logActivity(`在D${dayId}添加了活动"${data.title}"`)}
+  day.activities.sort((a,b)=>a.timeStart.localeCompare(b.timeStart));
+  // Clear temp state
+  window._tempImages = []; window._removedExisting = [];
+  state.expandedDays.add(dayId);saveState();closeModal();renderItinerary(document.getElementById('content'));
+  updateTaskBadge();showToast('保存成功'+(data.images.length?' 📷'+data.images.length+'张图':'')+(loc?' ✅已匹配地图':' ⚠️未匹配地图'));
+}
+function deleteActivity(dayId, actIdx) {
+  const day=state.itinerary.find(d=>d.id===dayId),a=day.activities[actIdx];
+  // Clean up images from IndexedDB
+  if (a.images && a.images.length) {
+    a.images.forEach(imgId => imgDB.remove(imgId).catch(()=>{}));
+  }
+  day.activities.splice(actIdx,1);
+  logActivity(`删除了D${dayId}的活动"${a.title}"`);saveState();renderItinerary(document.getElementById('content'));showToast('已删除');
+}
+
+/* ================================================================
+   MAP
+   ================================================================ */
+let mapInstance=null, mapMarkers=[], mapRoutes=[];
+function renderMapPage(el) {
+  el.innerHTML=`
+    <div class="map-controls">
+      <span style="font-size:13px;font-weight:600;color:var(--c-text-secondary);">按天筛选：</span>
+      <div class="day-filter"><button class="day-filter-btn ${state.mapDayFilter==='all'?'active':''}" onclick="filterMapDay('all')">全部路线</button>
+        ${state.itinerary.map(d=>{const c=d.city.split('→')[0].split('+')[0].trim();const ci=CITY_COLORS[c]||CITY_COLORS['罗马'];return`<button class="day-filter-btn ${state.mapDayFilter==d.id?'active':''}" onclick="filterMapDay(${d.id})" style="${state.mapDayFilter==d.id?`background:${ci.color};border-color:${ci.color};`:''}">D${d.id} ${c}</button>`;}).join('')}
+      </div>
+    </div>
+    <div id="map-container"></div>
+    <div class="legend">${[...new Set(Object.keys(CITY_COLORS))].map(c=>{const ci=CITY_COLORS[c];return`<div class="legend-item"><span class="legend-dot" style="background:${ci.color};"></span>${c}</div>`}).join('')}</div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-title">📍 地图说明</div>
+      <div style="font-size:13px;color:var(--c-text-secondary);line-height:1.8;">
+        • 地点名称在与数据库匹配时会自动标注在正确坐标上（绿色 ✅ 标记）<br>
+        • 连线显示当日活动顺序，虚线表示跨城交通<br>
+        • 点击标记可查看活动详情和地图上的位置<br>
+        • 输入地点时从推荐列表选择可获得精确地图标注
+      </div>
+    </div>`;
+  setTimeout(initMap,150);
+}
+function filterMapDay(d){state.mapDayFilter=d;renderMapPage(document.getElementById('content'));}
+function initMap() {
+  if(mapInstance){mapInstance.remove();mapInstance=null}mapMarkers=[];mapRoutes=[];
+  const map=L.map('map-container',{scrollWheelZoom:true}).setView([42.0,12.5],6);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',maxZoom:19}).addTo(map);
+  mapInstance=map;
+  const days=state.mapDayFilter==='all'?state.itinerary:state.itinerary.filter(d=>d.id===state.mapDayFilter);
+  days.forEach(day=>{
+    const city=day.city.split('→')[0].split('+')[0].trim();
+    const color=getCityColor(day.city);
+    const pts=day.activities.map(a=>lookupLocation(a.locationName)).filter(Boolean);
+    pts.forEach((loc,i)=>{
+      const m=L.circleMarker([loc.lat,loc.lng],{radius:8,fillColor:color,color:'#fff',weight:2,opacity:1,fillOpacity:.9}).addTo(map);
+      const act=day.activities.find(a=>lookupLocation(a.locationName)===loc);
+      m.bindPopup(`<strong>D${day.id} · ${esc(act?.title||'')}</strong><br><span style="font-size:11px;color:var(--c-text-secondary);">${act?.timeStart||''} · ${esc(day.city)}</span><br>${act?.desc?esc(act.desc).substring(0,80):''}`);
+      mapMarkers.push(m);
+    });
+    if(pts.length>1){const ll=pts.map(p=>[p.lat,p.lng]);const r=L.polyline(ll,{color,weight:3,opacity:.6,dashArray:day.city.includes('→')?'10,8':null}).addTo(map);mapRoutes.push(r);}
+  });
+  if(mapMarkers.length>0){const g=L.featureGroup(mapMarkers);map.fitBounds(g.getBounds().pad(state.mapDayFilter==='all'?.1:.2));}
+}
+
+/* ================================================================
+   TASKS
+   ================================================================ */
+const TASK_COLS=[{id:'todo',label:'待办',color:'#E8A92E'},{id:'doing',label:'进行中',color:'#2E7D8F'},{id:'done',label:'已完成',color:'#4A9D5B'}];
+const TASK_CATS=['抢票预订','打包清单','交通提醒','美食推荐'];
+const PRIO={high:{label:'高',color:'#C5283D'},medium:{label:'中',color:'#E8A92E'},low:{label:'低',color:'#A89B8C'}};
+function sortTasksByTime(a,b){
+  const aHas=a.dueDate&&a.dueDate!=='',bHas=b.dueDate&&b.dueDate!=='';
+  if(aHas&&!bHas)return -1;if(!aHas&&bHas)return 1;
+  return aHas?new Date(a.dueDate)-new Date(b.dueDate):a.title.localeCompare(b.title);
+}
+
+function renderTasks(el) {
+  el.innerHTML=TASK_CATS.map(cat=>{
+    const ct=state.tasks.filter(t=>t.category===cat),dc=ct.filter(t=>t.status==='done').length;
+    return`<div class="card" style="margin-bottom:16px;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="font-size:15px;font-weight:700;">${{'抢票预订':'🎫','打包清单':'🎒','交通提醒':'🚗','美食推荐':'🍝'}[cat]} ${cat}</div><div style="font-size:12px;color:var(--c-text-secondary);">${dc}/${ct.length} 完成</div></div>
+      <div class="kanban">${TASK_COLS.map(col=>{const tasks=ct.filter(t=>t.status===col.id).sort(sortTasksByTime);return`<div class="kanban-col"><div class="kanban-col-header"><span style="color:${col.color};">${col.label}</span><span class="count">${tasks.length}</span></div>${tasks.map(t=>renderTaskCard(t)).join('')||'<div style="text-align:center;padding:14px;color:var(--c-text-light);font-size:12px;">—</div>'}</div>`;}).join('')}
+    </div></div>`;
+  }).join('');
+  document.querySelectorAll('.task-card').forEach(card=>{card.addEventListener('dragstart',e=>e.dataTransfer.setData('taskId',card.dataset.taskId));});
+  document.querySelectorAll('.kanban-col').forEach(col=>{col.addEventListener('dragover',e=>e.preventDefault());col.addEventListener('drop',e=>{e.preventDefault();const tid=parseInt(e.dataTransfer.getData('taskId'));const ns=col.querySelector('.kanban-col-header span').textContent;const sm={'待办':'todo','进行中':'doing','已完成':'done'};const task=state.tasks.find(t=>t.id===tid);if(task&&task.status!==sm[ns]){task.status=sm[ns];logActivity(`将"${task.title}"标记为${ns}`);saveState();renderTasks(document.getElementById('content'));updateTaskBadge();showToast('已移至'+ns);}});});
+}
+function renderTaskCard(t){const m=getMember(t.assignee),p=PRIO[t.priority]||PRIO.medium,urg=t.dueDate&&(new Date(t.dueDate)-Date.now())<7*864e5&&t.status!=='done';return`<div class="task-card" draggable="true" data-task-id="${t.id}" style="border-left-color:${p.color};"><div class="tc-title">${esc(t.title)}</div>${t.desc?`<div style="font-size:11px;color:var(--c-text-secondary);margin-bottom:6px;">${esc(t.desc).substring(0,60)}${t.desc.length>60?'…':''}</div>`:''}<div class="tc-meta"><span class="tc-assignee" style="background:${m.color}20;color:${m.color};">${m.avatar} ${m.name}</span>${t.dueDate?`<span class="tc-due ${urg?'urgent':''}">📅 ${fmtDate(t.dueDate)}</span>`:''}<span style="display:flex;align-items:center;gap:3px;"><span class="priority-dot" style="background:${p.color};"></span>${p.label}</span></div><div style="display:flex;gap:6px;margin-top:8px;opacity:0;transition:opacity .15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0"><button class="btn btn-outline btn-sm" onclick="openTaskModal(${t.id})">编辑</button><button class="btn btn-outline btn-sm" onclick="deleteTask(${t.id})">删除</button></div></div>`;}
+function openTaskModal(tid){const ie=tid!==undefined;const t=ie?state.tasks.find(x=>x.id===tid):{title:'',category:'抢票预订',assignee:state.currentUser,dueDate:'',priority:'medium',status:'todo',desc:''};showModal(`<h3>${ie?'编辑待办':'新建待办'}</h3><div class="form-group"><label>标题</label><input type="text" id="task-title" value="${esc(t.title)}" placeholder="如：斗兽场抢票"></div><div class="form-group"><label>分类</label><select id="task-category">${TASK_CATS.map(c=>`<option value="${c}" ${t.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="form-group"><label>描述</label><textarea id="task-desc" placeholder="详细信息...">${esc(t.desc||'')}</textarea></div><div style="display:flex;gap:12px;"><div class="form-group" style="flex:1;"><label>负责人</label><select id="task-assignee">${MEMBERS.map(m=>`<option value="${m.id}" ${t.assignee===m.id?'selected':''}>${memberOptLabel(m)}</option>`).join('')}</select></div><div class="form-group" style="flex:1;"><label>截止日期</label><input type="date" id="task-due" value="${t.dueDate||''}"></div></div><div style="display:flex;gap:12px;"><div class="form-group" style="flex:1;"><label>优先级</label><select id="task-priority">${Object.entries(PRIO).map(([k,v])=>`<option value="${k}" ${t.priority===k?'selected':''}>${v.label}</option>`).join('')}</select></div><div class="form-group" style="flex:1;"><label>状态</label><select id="task-status">${TASK_COLS.map(c=>`<option value="${c.id}" ${t.status===c.id?'selected':''}>${c.label}</option>`).join('')}</select></div></div><div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveTask(${ie?tid:'-1'})">保存</button></div>`)}
+function saveTask(tid){const d={title:document.getElementById('task-title').value.trim(),category:document.getElementById('task-category').value,desc:document.getElementById('task-desc').value.trim(),assignee:parseInt(document.getElementById('task-assignee').value),dueDate:document.getElementById('task-due').value,priority:document.getElementById('task-priority').value,status:document.getElementById('task-status').value};if(!d.title){showToast('请填写标题');return}if(tid>=0){Object.assign(state.tasks.find(t=>t.id===tid),d);logActivity(`编辑了待办"${d.title}"`)}else{d.id=nextId(state.tasks);state.tasks.push(d);logActivity(`新建了待办"${d.title}"`)}saveState();closeModal();renderTasks(document.getElementById('content'));updateTaskBadge();showToast('保存成功')}
+function deleteTask(id){const t=state.tasks.find(x=>x.id===id);state.tasks=state.tasks.filter(x=>x.id!==id);logActivity(`删除了待办"${t.title}"`);saveState();renderTasks(document.getElementById('content'));updateTaskBadge();showToast('已删除')}
+function updateTaskBadge(){document.getElementById('task-badge').textContent=state.tasks.filter(t=>t.status!=='done').length}
+
+/* ================================================================
+   PACKING (行李准备)
+   ================================================================ */
+const PACKING_CATS = ['证件','衣物','电子','洗漱','药品','其他'];
+const PACKING_CAT_ICONS = {证件:'📄',衣物:'👕',电子:'🔌',洗漱:'🪥',药品:'💊',其他:'🎒'};
+
+function openPackingModal(editId) {
+  const isEdit = editId!==undefined;
+  const item = isEdit ? state.packing.find(p=>p.id===editId) : {category:'证件',item:'',note:'',assignee:0,checked:false,isShared:false};
+  const isShared = item.isShared || false;
+  const cats = PACKING_CATS.map(c=>`<option value="${c}" ${item.category===c?'selected':''}>${PACKING_CAT_ICONS[c]} ${c}</option>`).join('');
+  const selShared = isShared?'selected':'';
+  const mops = '<option value="-1" '+selShared+'>🔥 全员必带</option><option value="0">公用</option>' + MEMBERS.map(m=>`<option value="${m.id}" ${(!isShared&&item.assignee===m.id)?'selected':''}>${m.name}</option>`).join('');
+  showModal(`<h3>${isEdit?'编辑行李项':'添加行李项'}</h3>
+    <div class="form-group"><label>分类</label><select id="pk-cat">${cats}</select></div>
+    <div class="form-group"><label>物品名称</label><input type="text" id="pk-item" value="${esc(item.item)}" placeholder="如：转换插头（意标）"></div>
+    <div class="form-group"><label>备注</label><input type="text" id="pk-note" value="${esc(item.note||'')}" placeholder="如：三孔细脚"></div>
+    <div class="form-group"><label>负责人</label><select id="pk-assignee">${mops}</select></div>
+    ${isEdit&&isShared?`<div style="font-size:12px;color:#E8A92E;margin-bottom:8px;">⚠️ 此修改将同步到所有成员的副本</div>`:''}
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="savePackingItem(${isEdit?editId:-1})">保存</button>
+    </div>`);
+}
+
+function savePackingItem(editId) {
+  const assigneeVal = parseInt(document.getElementById('pk-assignee').value);
+  const isShared = assigneeVal === -1;
+  const data = {
+    category: document.getElementById('pk-cat').value,
+    item: document.getElementById('pk-item').value.trim(),
+    note: document.getElementById('pk-note').value.trim(),
+    assignee: isShared ? 0 : assigneeVal,
+    checked: false,
+    isShared: isShared,
+    sharedGroup: isShared ? Date.now().toString(36) : undefined,
+  };
+  if(!data.item){showToast('请填写物品名称');return}
+  if(editId>0){
+    // Edit existing item
+    const existing = state.packing.find(p=>p.id===editId);
+    const wasShared = !!(existing && existing.sharedGroup);
+    if(wasShared && isShared){
+      // 共享→共享：更新所有组内成员的副本
+      state.packing.forEach(p=>{
+        if(p.sharedGroup===existing.sharedGroup){
+          p.category = data.category;
+          p.item = data.item;
+          p.note = data.note;
+        }
+      });
+      logActivity('更新了全员行李项"'+data.item+'"（已同步到所有成员）');
+    } else if(wasShared && !isShared){
+      // 共享→非共享：删除整组，创建单个
+      state.packing = state.packing.filter(p=>p.sharedGroup!==existing.sharedGroup);
+      const maxId = state.packing.reduce((m,p)=>Math.max(m,p.id),0);
+      const newData = {...data, id:maxId+1, sharedGroup:undefined, isShared:false};
+      delete newData.sharedGroup;
+      state.packing.push(newData);
+      logActivity('将全员行李项"'+data.item+'"改为'+(assigneeVal===0?'公用':getMember(assigneeVal)?.name||'个人')+'物品');
+    } else if(!wasShared && isShared){
+      // 非共享→全员必带：删除单个，创建6份副本
+      const oldChecked = existing ? existing.checked : false;
+      state.packing = state.packing.filter(p=>p.id!==editId);
+      const maxId = state.packing.reduce((m,p)=>Math.max(m,p.id),0);
+      const groupId = data.sharedGroup;
+      MEMBERS.forEach((m,i)=>{
+        state.packing.push({...data, assignee: m.id, sharedGroup: groupId, id: maxId+1+i, checked: oldChecked});
+      });
+      logActivity('将"'+data.item+'"改为全员必带（已同步到6人清单）');
+    } else {
+      // 非共享→非共享：直接更新
+      const idx = state.packing.findIndex(p=>p.id===editId);
+      if(idx>=0){ data.checked = state.packing[idx].checked; delete data.sharedGroup; state.packing[idx] = {...state.packing[idx], ...data}; logActivity('更新了行李项"'+data.item+'"'); }
+    }
+  } else {
+    if(isShared){
+      // Create 6 copies, one per member
+      const maxId = state.packing.reduce((m,p)=>Math.max(m,p.id),0);
+      const groupId = data.sharedGroup;
+      MEMBERS.forEach((m,i)=>{
+        state.packing.push({...data, assignee: m.id, sharedGroup: groupId, id: maxId+1+i});
+      });
+      logActivity('添加了全员必带"'+data.item+'"（已同步到6人清单）');
+    } else {
+      const maxId = state.packing.reduce((m,p)=>Math.max(m,p.id),0);
+      state.packing.push({...data, id:maxId+1});
+      logActivity('添加了行李项"'+data.item+'"');
+    }
+  }
+  saveState(); closeModal(); renderPacking(document.getElementById('content'));
+  updatePackingBadge(); showToast(isShared&&editId<0?'已添加到6人清单！':'保存成功');
+}
+
+function togglePackingItem(id) {
+  const item = state.packing.find(p=>p.id===id);
+  if(!item) return;
+  item.checked = !item.checked;
+  logActivity((item.checked?'勾选了':'取消勾选')+'行李项"'+item.item+'"');
+  saveState(); updatePackingBadge();
+  renderPacking(document.getElementById('content'));
+}
+
+function deletePackingItem(id) {
+  const item = state.packing.find(p=>p.id===id);
+  if(!item) return;
+  if(item.sharedGroup){
+    const count = state.packing.filter(p=>p.sharedGroup===item.sharedGroup).length;
+    if(!confirm('删除共享项"'+item.item+'"？（将移除所有'+count+'位成员的副本）')) return;
+    state.packing = state.packing.filter(p=>p.sharedGroup!==item.sharedGroup);
+    logActivity('删除了全员行李项"'+item.item+'"');
+  } else {
+    if(!confirm('删除"'+item.item+'"？')) return;
+    state.packing = state.packing.filter(p=>p.id!==id);
+    logActivity('删除了行李项"'+item.item+'"');
+  }
+  saveState(); renderPacking(document.getElementById('content'));
+  updatePackingBadge(); showToast('已删除');
+}
+
+function updatePackingBadge() {
+  const checked = state.packing.filter(p=>p.checked).length;
+  const total = state.packing.length;
+  const badge = document.getElementById('packing-badge');
+  if(!badge) return;
+  badge.textContent = checked+'/'+total;
+  badge.style.background = checked===total && total>0 ? '#4EA347' : '#A89B8C';
+}
+
+function renderPacking(el) {
+  const filter = state.packingFilter || 'all';
+  const sorted = [...state.packing].sort((a,b)=>{
+    if(a.checked!==b.checked) return a.checked?1:-1;
+    return PACKING_CATS.indexOf(a.category)-PACKING_CATS.indexOf(b.category);
+  });
+  let items = sorted.filter(p=>filter==='all'||p.assignee===filter);
+  if(filter==='all'){
+    const seenGroups = new Set();
+    items = items.filter(p=>{
+      if(!p.sharedGroup) return true;
+      if(seenGroups.has(p.sharedGroup)) return false;
+      seenGroups.add(p.sharedGroup);
+      return true;
+    });
+  }
+  const catGroups = {};
+  items.forEach(p=>{
+    if(!catGroups[p.category]) catGroups[p.category] = [];
+    catGroups[p.category].push(p);
+  });
+
+  // Per-member progress
+  let progressItems = filter==='all' ? [...state.packing] : state.packing.filter(p=>p.assignee===filter);
+  const checkedTotal = progressItems.filter(p=>p.checked).length;
+  const totalForProgress = progressItems.length;
+  const progress = totalForProgress>0?Math.round(checkedTotal/totalForProgress*100):0;
+
+  const mFilters = '<button class="btn '+(filter==='all'?'btn-primary':'btn-outline')+' btn-sm" onclick="state.packingFilter=\'all\';renderPacking(document.getElementById(\'content\'))">全部</button>' +
+    MEMBERS.map(m=>`<button class="btn ${filter===m.id?'btn-primary':'btn-outline'} btn-sm" onclick="state.packingFilter=${m.id};renderPacking(document.getElementById('content'))" style="padding:4px 10px;">${m.name}</button>`).join('');
+
+  el.innerHTML = `\x3cdiv style="margin-bottom:14px;"\x3e
+      \x3cdiv style="display:flex;align-items:center;gap:12px;margin-bottom:8px;"\x3e
+        \x3cspan style="font-weight:700;font-size:15px;"\x3e📊 准备进度：${checkedTotal}/${totalForProgress}（${progress}%）\x3c/span\x3e
+      \x3c/div\x3e
+      \x3cdiv class="progress-bar" style="height:8px;background:var(--c-border);border-radius:4px;overflow:hidden;"\x3e
+        \x3cdiv style="height:100%;width:${progress}%;background:linear-gradient(90deg,#4EA347,#7ECF6A);border-radius:4px;transition:width .3s;"\x3e\x3c/div\x3e
+      \x3c/div\x3e
+    \x3c/div\x3e
+    \x3cdiv style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;"\x3e${mFilters}\x3c/div\x3e
+    \x3cdiv style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;"\x3e
+      ${Object.keys(catGroups).map(cat=>`\x3cdiv class="card" style="padding:14px;"\x3e
+          \x3cdiv style="font-weight:700;font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:6px;"\x3e
+            \x3cspan style="font-size:18px;"\x3e${PACKING_CAT_ICONS[cat]||'📦'}\x3c/span\x3e${cat}
+            \x3cspan style="font-weight:400;color:var(--c-text-secondary);font-size:12px;margin-left:auto;"\x3e${catGroups[cat].filter(p=>p.checked).length}/${catGroups[cat].length}\x3c/span\x3e
+          \x3c/div\x3e
+          ${catGroups[cat].map(p=>{
+            const m = p.assignee>0?MEMBERS.find(mb=>mb.id===p.assignee):null;
+            const tag = (!p.sharedGroup && m)?`\x3cspan style="font-size:11px;background:${m.color}20;color:${m.color};padding:1px 6px;border-radius:8px;margin-left:6px;"\x3e${m.name}\x3c/span\x3e`:'';
+            const sharedTag = p.sharedGroup?`\x3cspan style="font-size:11px;background:#FFF3CD;color:#B8560A;padding:1px 6px;border-radius:8px;margin-left:4px;"\x3e🔥全员必带\x3c/span\x3e`:(p.assignee===0?'\x3cspan style="font-size:11px;background:var(--c-surface-alt);color:var(--c-text-secondary);padding:1px 6px;border-radius:8px;margin-left:4px;"\x3e公用\x3c/span\x3e':'');
+            const isOwner = state.currentUser === p.assignee || p.assignee === 0 || !!p.sharedGroup;
+            const clickAttr = isOwner ? `onclick="togglePackingItem(${p.id})"` : '';
+            const cursor = isOwner ? 'cursor:pointer' : 'cursor:default;opacity:0.6';
+            const actions = isOwner ? `\x3cbutton class="btn btn-outline btn-sm" style="padding:2px 6px;font-size:11px;" onclick="event.stopPropagation();openPackingModal(${p.id})"\x3e✎\x3c/button\x3e
+              \x3cbutton class="btn btn-outline btn-sm" style="padding:2px 6px;font-size:11px;color:#C5283D;" onclick="event.stopPropagation();deletePackingItem(${p.id})"\x3e×\x3c/button\x3e` : '';
+            return `\x3cdiv class="packing-item${p.checked?' checked':''}" id="pk-${p.id}" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--c-bg);${cursor};font-size:13px;" ${clickAttr}\x3e
+              \x3cspan style="font-size:18px;flex-shrink:0;"\x3e${p.checked?'✅':'⬜'}\x3c/span\x3e
+              \x3cspan style="flex:1;${p.checked?'text-decoration:line-through;color:var(--c-text-light);':''}"\x3e${esc(p.item)}${sharedTag}${p.note?`\x3cspan style="font-size:11px;color:var(--c-text-light);"\x3e · ${esc(p.note)}\x3c/span\x3e`:''}${tag}\x3c/span\x3e
+              ${actions}
+            \x3c/div\x3e`;
+          }).join('')}
+        \x3c/div\x3e
+      `).join('')}
+    \x3c/div\x3e
+  `;
+}
+
+/* ================================================================
+   EXPENSES (public/private split)
+   ================================================================ */
+const EXP_CATS=['交通','住宿','门票','餐饮','购物','证件','保险','其他'];
+function renderExpenses(el) {
+  const pub = state.expenses.filter(e=>e.isShared), pri = state.expenses.filter(e=>!e.isShared);
+  const totalCNY = state.expenses.reduce((s,e)=>s+toCNY(e.amount,e.currency),0);
+  const totalAA = pub.reduce((s,e)=>s+toCNY(e.amount,e.currency),0);
+  const perShare = totalAA/6;
+
+  // per person breakdown
+  const pp = {}; MEMBERS.forEach(m=>{ pp[m.id] = { aa:0, personal:0 } });
+  pub.forEach(e=>{ const cny=toCNY(e.amount,e.currency); const share=cny/e.splitAmong.length; e.splitAmong.forEach(uid=>{ pp[uid].aa+=share }); });
+  pri.forEach(e=>{ const cny=toCNY(e.amount,e.currency); pp[e.payerId].personal+=cny; });
+
+  // category stats
+  const cats={}; state.expenses.forEach(e=>{const cny=toCNY(e.amount,e.currency);cats[e.category]=(cats[e.category]||0)+cny});
+  const colors={'交通':'#2E7D8F','住宿':'#D9622E','门票':'#7B5EA7','证件':'#E8A92E','保险':'#4A9D5B','餐饮':'#C5283D','购物':'#06B6D4','其他':'#A89B8C'};
+
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <span style="font-size:11px;color:var(--c-text-light);">实时汇率</span>
+      <span id="eur-rate-display" style="font-weight:700;color:var(--c-secondary);font-size:13px;background:var(--c-secondary-light);padding:2px 10px;border-radius:12px;">€1 = ¥${eurToCny}</span>
+      <span style="font-size:10px;color:var(--c-text-light);">自动更新</span>
+    </div>
+    <div class="expense-summary">
+      <div class="summary-box">
+        <div class="sb-icon" style="background:linear-gradient(135deg,#FFF7ED,#FED7AA);">💰</div>
+        <div class="sb-content"><div class="sb-value" style="color:var(--c-primary);">¥${totalCNY.toFixed(0)}</div><div class="sb-label">总消费</div><div class="sb-sub">${state.expenses.length} 笔记录</div></div>
+      </div>
+      <div class="summary-box">
+        <div class="sb-icon" style="background:linear-gradient(135deg,#DCFCE7,#BBF7D0);">🏘️</div>
+        <div class="sb-content"><div class="sb-value" style="color:#16A34A;">¥${totalAA.toFixed(0)}</div><div class="sb-label">公用费用</div><div class="sb-sub">人均 ¥${perShare.toFixed(0)} · ${pub.length} 笔</div></div>
+      </div>
+      <div class="summary-box">
+        <div class="sb-icon" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);">👤</div>
+        <div class="sb-content"><div class="sb-value" style="color:#D97706;">¥${(totalCNY-totalAA).toFixed(0)}</div><div class="sb-label">个人费用</div><div class="sb-sub">${pri.length} 笔个人消费</div></div>
+      </div>
+      <div class="summary-box">
+        <div class="sb-icon" style="background:linear-gradient(135deg,#E0F2FE,#BAE6FD);">📝</div>
+        <div class="sb-content"><div class="sb-value" style="color:var(--c-secondary);">${pub.length+pri.length}</div><div class="sb-label">记账笔数</div><div class="sb-sub">${pub.length} 公用 · ${pri.length} 个人</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">👤 人均明细</div>
+      <div class="per-person-grid">
+        ${MEMBERS.map(m=>{const p=pp[m.id];const t=p.aa+p.personal;const sharePct=totalCNY>0?(t/totalCNY*100).toFixed(0):0;const isCurrent=state.currentUser===m.id;return`<div class="per-person-card ${isCurrent?'current':''}"><div class="pp-avatar" style="background:${m.color}20;border:2px solid ${m.color};">${m.avatar}</div><div class="pp-name" style="color:${m.color};">${m.name}</div><div class="pp-row pp-aa"><span class="pp-label">AA</span><span class="pp-value">¥${p.aa.toFixed(0)}</span></div><div class="pp-row pp-personal"><span class="pp-label">个人</span><span class="pp-value">¥${p.personal.toFixed(0)}</span></div><div class="pp-total" style="color:${m.color};">¥${t.toFixed(0)}</div><div class="pp-share"><div class="pp-share-fill" style="width:${sharePct}%;background:${m.color};"></div></div><div style="font-size:10px;color:var(--c-text-light);margin-top:6px;">占总消费 ${sharePct}%</div></div>`}).join('')}
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:16px;">
+      <div class="card"><div class="card-title">📊 分类占比</div>${Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>{const pct=(amt/totalCNY*100).toFixed(0);return`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:13px;"><span>${cat}</span><span style="font-weight:600;">¥${amt.toFixed(0)} · ${pct}%</span></div><div class="category-bar"><div class="category-bar-fill" style="width:${pct}%;background:${colors[cat]||'#A89B8C'};"></div></div></div>`}).join('')||'<div class="empty-state">暂无数据</div>'}</div>
+      <div class="card"><div class="card-title">💡 费用说明</div><div style="font-size:13px;color:var(--c-text-secondary);line-height:1.8;">• <strong style="color:#16A34A;">公用费用</strong>：所有人AA分摊，如住宿、门票、交通<br>• <strong style="color:#D97706;">个人费用</strong>：个人自付，如购物、个人物品<br>• 每人总支出 = AA分摊金额 + 个人消费金额<br>• 记账时请选择"公用"或"个人"</div></div>
+    </div>
+
+    <div class="card"><div class="card-title">📝 消费明细</div>
+      <div style="overflow-x:auto;"><table class="expense-table"><thead><tr><th>日期</th><th>项目</th><th>分类</th><th>类型</th><th>金额</th><th>付款人</th><th>分摊</th><th>备注</th><th></th></tr></thead><tbody>
+        ${state.expenses.length===0?'<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--c-text-light);">暂无消费记录，点击右上角"记一笔账"开始</td></tr>':state.expenses.sort((a,b)=>new Date(a.date)-new Date(b.date)).map(e=>{const m=getMember(e.payerId),cny=toCNY(e.amount,e.currency);return`<tr><td>${fmtDate(e.date)}</td><td>${esc(e.item)}</td><td><span class="tag" style="background:var(--c-surface-alt);color:var(--c-text-secondary);">${e.category}</span></td><td><span class="shared-badge ${e.isShared?'public':'private'}">${e.isShared?'公用':'个人'}</span></td><td class="amt ${e.currency==='EUR'?'amt-eur':'amt-cny'}">${e.currency==='EUR'?'€':'¥'}${e.amount}</td><td><span style="color:${m.color};font-weight:600;">${m.avatar} ${m.name}</span></td><td style="font-size:12px;">${e.isShared?e.splitAmong.map(uid=>getMember(uid).avatar).join('')+' (¥'+(cny/e.splitAmong.length).toFixed(0)+'/人)':'个人自付'}</td><td style="font-size:12px;color:var(--c-text-secondary);">${esc(e.note||'')}</td><td><button class="btn btn-outline btn-xs" onclick="openExpenseModal(${e.id})">编辑</button> <button class="btn btn-outline btn-xs" onclick="deleteExpense(${e.id})">删除</button></td></tr>`}).join('')}
+      </tbody></table></div>
+    </div>`;
+}
+
+function openExpenseModal(eid){const ie=eid!==undefined;const e=ie?state.expenses.find(x=>x.id===eid):{item:'',amount:0,currency:'CNY',payerId:state.currentUser,category:'交通',isShared:true,splitAmong:[1,2,3,4,5,6],date:fmtDateFull(new Date()),note:''};showModal(`<h3>${ie?'编辑账目':'记一笔账'}</h3><div class="form-group"><label>项目名称</label><input type="text" id="exp-item" value="${esc(e.item)}" placeholder="如：斗兽场门票"></div><div style="display:flex;gap:12px;"><div class="form-group" style="flex:1;"><label>金额</label><input type="number" step="0.01" id="exp-amount" value="${e.amount}"></div><div class="form-group" style="width:100px;"><label>币种</label><select id="exp-currency"><option value="CNY" ${e.currency==='CNY'?'selected':''}>¥ CNY</option><option value="EUR" ${e.currency==='EUR'?'selected':''}>€ EUR</option></select></div></div><div style="display:flex;gap:12px;"><div class="form-group" style="flex:1;"><label>分类</label><select id="exp-category">${EXP_CATS.map(c=>`<option value="${c}" ${e.category===c?'selected':''}>${c}</option>`).join('')}</select></div><div class="form-group" style="flex:1;"><label>日期</label><input type="date" id="exp-date" value="${e.date}"></div></div><div class="form-group"><label>付款人</label><select id="exp-payer">${MEMBERS.map(m=>`<option value="${m.id}" ${e.payerId===m.id?'selected':''}>${memberOptLabel(m)}</option>`).join('')}</select></div><div class="form-group"><label>费用类型</label><div style="display:flex;gap:10px;"><label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:10px 16px;border:2px solid ${e.isShared?'#16A34A':'var(--c-border)'};border-radius:8px;flex:1;background:${e.isShared?'#DCFCE7':'var(--c-surface)'};"><input type="radio" name="exp-shared" value="1" ${e.isShared?'checked':''} onchange="toggleExpSplit()"> 🏘️ 公用（AA分摊）</label><label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:10px 16px;border:2px solid ${!e.isShared?'#D97706':'var(--c-border)'};border-radius:8px;flex:1;background:${!e.isShared?'#FEF3C7':'var(--c-surface)'};"><input type="radio" name="exp-shared" value="0" ${!e.isShared?'checked':''} onchange="toggleExpSplit()"> 👤 个人</label></div></div><div id="exp-split-group"><div class="form-group"><label>分摊给（多选）</label><div style="display:flex;gap:8px;flex-wrap:wrap;padding:8px;border:1.5px solid var(--c-border);border-radius:8px;">${MEMBERS.map(m=>`<label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;"><input type="checkbox" value="${m.id}" ${e.splitAmong.includes(m.id)?'checked':''}> ${m.avatar} ${m.name}</label>`).join('')}</div></div></div><div class="form-group"><label>备注</label><input type="text" id="exp-note" value="${esc(e.note||'')}" placeholder="可选"></div><div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveExpense(${ie?eid:'-1'})">保存</button></div>`);if(!e.isShared)document.getElementById('exp-split-group').style.display='none'}
+function toggleExpSplit(){const shared=document.querySelector('input[name="exp-shared"]:checked').value==='1';document.getElementById('exp-split-group').style.display=shared?'block':'none'}
+function saveExpense(eid){const isShared=document.querySelector('input[name="exp-shared"]:checked').value==='1';const splitAmong=isShared?[...document.querySelectorAll('#modal input[type=checkbox]:checked')].map(cb=>parseInt(cb.value)):[];if(isShared&&splitAmong.length===0){showToast('请选择至少一人分摊');return}const d={item:document.getElementById('exp-item').value.trim(),amount:parseFloat(document.getElementById('exp-amount').value)||0,currency:document.getElementById('exp-currency').value,category:document.getElementById('exp-category').value,date:document.getElementById('exp-date').value,payerId:parseInt(document.getElementById('exp-payer').value),isShared,splitAmong:isShared?splitAmong:[],note:document.getElementById('exp-note').value.trim()};if(!d.item||d.amount<=0){showToast('请填写项目和金额');return}if(eid>=0){Object.assign(state.expenses.find(e=>e.id===eid),d);logActivity(`编辑了账目"${d.item}"`)}else{d.id=nextId(state.expenses);state.expenses.push(d);logActivity(`记录了${d.isShared?'公用':'个人'}消费"${d.item}"`)}saveState();closeModal();renderExpenses(document.getElementById('content'));showToast('保存成功')}
+function deleteExpense(id){const e=state.expenses.find(x=>x.id===id);state.expenses=state.expenses.filter(x=>x.id!==id);logActivity(`删除了账目"${e.item}"`);saveState();renderExpenses(document.getElementById('content'));showToast('已删除')}
+
+/* ================================================================
+   MEMBERS (by itinerary responsibility)
+   ================================================================ */
+function renderMembers(el) {
+  // Group by responsibility areas
+  const romeMembers = MEMBERS.filter(m=>m.duty.includes('罗马'));
+  const southMembers = MEMBERS.filter(m=>m.duty.includes('南意'));
+  const tuscanyMembers = MEMBERS.filter(m=>m.duty.includes('托斯卡纳'));
+  const florenceMembers = MEMBERS.filter(m=>m.duty.includes('佛罗伦萨'));
+
+  const groups = [
+    {label:'🏛️ 罗马行程 D1-3', members:romeMembers, color:'#FDE8E0', dayRange:[1,3]},
+    {label:'🌊 南意行程 D4-6', members:southMembers, color:'#C9E5EB', dayRange:[4,6]},
+    {label:'🌳 托斯卡纳行程 D7-9', members:tuscanyMembers, color:'#DCFCE7', dayRange:[7,9]},
+    {label:'🎨 佛罗伦萨行程 D10-11', members:florenceMembers, color:'#F3E8FF', dayRange:[10,11]},
+  ];
+
+  el.innerHTML = groups.map(g=>`
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">${g.label} <span style="font-size:12px;font-weight:400;color:var(--c-text-secondary);">${g.dayRange[0]}天</span></div>
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(g.members.length,3)},1fr);gap:12px;">
+        ${g.members.map(m=>{
+          const isCurrent=m.id===state.currentUser;
+          const taskCount=state.tasks.filter(t=>t.assignee===m.id).length;
+          const doneCount=state.tasks.filter(t=>t.assignee===m.id&&t.status==='done').length;
+          return`<div class="member-card ${isCurrent?'current':''}" onclick="switchUser(${m.id})" style="background:${g.color};border-color:transparent;">
+            ${isCurrent?'<div class="mc-badge">当前</div>':''}
+            <div class="mc-avatar" style="background:#fff;border:2px solid ${m.color};">${m.avatar}</div>
+            <div class="mc-name">${m.name}</div>
+            <div class="mc-duty">${m.duty}</div>
+            <div style="margin-top:8px;font-size:11px;color:var(--c-text-secondary);">✅ ${doneCount}/${taskCount} 待办</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  `).join('') + `
+    <div class="card">
+      <div class="card-title">💡 说明</div>
+      <div style="font-size:13px;color:var(--c-text-secondary);line-height:1.8;">
+        • 6位成员按行程分段分工，每人负责各自行程段的攻略和安排<br>
+        • 点击上方任意成员卡片可切换为该用户进行操作<br>
+        • 所有操作记录在"概览"的最新动态中<br>
+        • 本工作台支持手机端访问，适合旅途中随时查看和更新
+      </div>
+    </div>
+  `;
+}
+
+/* ================================================================
+   ACTIVITY LOG（协同记录）
+   ================================================================ */
+function renderActivityLog(el) {
+  const logs = state.activities;
+  const userFilter = state.activityFilter||'all';
+  const filtered = userFilter==='all'?logs:logs.filter(a=>a.userId===parseInt(userFilter));
+
+  el.innerHTML = `
+    <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-weight:600;font-size:13px;color:var(--c-text-secondary);">👤 筛选：</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn btn-sm ${userFilter==='all'?'btn-primary':'btn-outline'}" onclick="setActivityFilter('all');renderActivityLog(document.getElementById('content'))">全部成员</button>
+        ${MEMBERS.map(m=>`<button class="btn btn-sm ${userFilter===String(m.id)?'btn-primary':'btn-outline'}" onclick="setActivityFilter('${m.id}');renderActivityLog(document.getElementById('content'))" style="${userFilter===String(m.id)?'background:'+m.color+';border-color:'+m.color+';':''}">${m.avatar} ${m.name}</button>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      ${filtered.length===0?`<div class="empty-state"><div class="es-icon">📋</div>${userFilter==='all'?'还没有协作记录，开始使用工作台就会出现在这里':'该成员暂无操作记录'}</div>`:
+      `<div style="display:flex;flex-direction:column;gap:0;">${filtered.map((a,i)=>{
+        const m=getMember(a.userId);
+        const t=new Date(a.time);
+        const dateStr=t.toLocaleDateString('zh-CN',{month:'short',day:'numeric'});
+        const timeStr=t.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+        const showDate=i===0||new Date(filtered[i-1].time).toDateString()!==t.toDateString();
+        return`${showDate?`<div style="padding:12px 16px;font-size:12px;font-weight:700;color:var(--c-text-secondary);background:var(--c-surface-alt);border-radius:8px 8px 0 0;${i>0?'margin-top:12px;':''}border-bottom:1px solid var(--c-border);">📅 ${dateStr}</div>`:''}
+        <div class="activity-item" style="border-bottom:1px solid var(--c-border);padding:12px 16px;${!showDate?'margin-top:0;':''}">
+          <div class="ai-avatar" style="background:${m.color}20;border:2px solid ${m.color};">${m.avatar}</div>
+          <div class="ai-content" style="flex:1;">
+            <div><strong>${m.name}</strong> ${esc(a.action)}</div>
+            <div class="ai-time" style="font-size:11px;color:var(--c-text-light);">${timeStr}</div>
+          </div>
+        </div>`;
+      }).join('')}</div>`}
+    </div>
+  `;
+}
+
+function setActivityFilter(uid) { state.activityFilter = uid; saveState(); }
+
+/* ================================================================
+   MODAL & USER
+   ================================================================ */
+function showModal(h){document.getElementById('modal').innerHTML=h;document.getElementById('modal-overlay').classList.add('show')}
+function closeModal(){
+  // Clear temp images on modal close if not from save
+  if (document.getElementById('modal-overlay').classList.contains('show')) {
+    window._tempImages = []; window._removedExisting = [];
+  }
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+document.getElementById('modal-overlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
+
+/* ================================================================
+   IMAGE: Load timeline images from IndexedDB & Lightbox
+   ================================================================ */
+function loadTimelineImages() {
+  document.querySelectorAll('.timeline-img[data-imgid]').forEach(img => {
+    const imgId = img.dataset.imgid;
+    imgDB.load(imgId).then(b64 => { if (b64 && img) img.src = b64; }).catch(()=>{});
+  });
+}
+
+let lightboxImages = [], lightboxIdx = 0;
+
+function openLightbox(dayId, actIdx, imgIdx) {
+  const day = state.itinerary.find(d => d.id === dayId);
+  if (!day) return;
+  const act = day.activities[actIdx];
+  if (!act || !act.images) return;
+  lightboxImages = act.images;
+  lightboxIdx = imgIdx;
+  showLightboxImage();
+  document.getElementById('lightbox').classList.add('show');
+}
+
+function showLightboxImage() {
+  const img = document.getElementById('lightbox-img');
+  const counter = document.getElementById('lightbox-counter');
+  const imgId = lightboxImages[lightboxIdx];
+  img.alt = '加载中...';
+  imgDB.load(imgId).then(b64 => {
+    if (b64) img.src = b64;
+    else img.alt = '图片加载失败';
+  }).catch(() => { img.alt = '图片加载失败'; });
+  counter.textContent = (lightboxIdx + 1) + ' / ' + lightboxImages.length;
+  // Update nav visibility
+  document.querySelector('.lightbox-nav.prev').style.display = lightboxImages.length > 1 ? 'flex' : 'none';
+  document.querySelector('.lightbox-nav.next').style.display = lightboxImages.length > 1 ? 'flex' : 'none';
+}
+
+function lightboxNav(dir) {
+  lightboxIdx = (lightboxIdx + dir + lightboxImages.length) % lightboxImages.length;
+  showLightboxImage();
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('show');
+}
+
+// Keyboard navigation for lightbox
+document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('lightbox').classList.contains('show')) return;
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') lightboxNav(-1);
+  if (e.key === 'ArrowRight') lightboxNav(1);
+});
+
+function renderCurrentUser(){const m=getMember(state.currentUser);document.getElementById('cu-avatar').style.background=m.color+'20';document.getElementById('cu-avatar').style.border='1.5px solid '+m.color;document.getElementById('cu-avatar').innerHTML=m.avatar;document.getElementById('cu-name').textContent=m.name;document.getElementById('cu-responsibility').textContent=m.duty}
+function renderUserDropdown(){document.getElementById('user-dropdown').innerHTML=MEMBERS.map(m=>`<div class="user-option" onclick="switchUser(${m.id})"><div class="avatar" style="background:${m.color}20;border:1.5px solid ${m.color};">${m.avatar}</div><div><div class="uo-name">${m.name}</div><div class="uo-desc">${m.duty}</div></div></div>`).join('')}
+function switchUser(id){state.currentUser=id;document.getElementById('user-dropdown').classList.remove('show');renderCurrentUser();saveState();showToast('已切换为 '+getMember(id).name)}
+document.getElementById('current-user-btn').addEventListener('click',e=>{e.stopPropagation();document.getElementById('user-dropdown').classList.toggle('show')});
+document.addEventListener('click',()=>document.getElementById('user-dropdown').classList.remove('show'));
+
+/* ================================================================
+   NAV EVENTS
+   ================================================================ */
+document.querySelectorAll('.nav-item').forEach(el=>{el.addEventListener('click',()=>{if(mapInstance&&el.dataset.view!=='map'){mapInstance.remove();mapInstance=null}switchView(el.dataset.view);if(window.innerWidth<=768)toggleSidebar()})});
+
+/* ================================================================
+   SUPABASE REAL-TIME SYNC
+   ================================================================ */
+let supabaseClient = null, supabaseChannel = null, tripRowId = null, lastSupabaseVersion = -1, lastBroadcast = '', syncStatus = 'offline';
+
+function initSupabase() {
+  const url = localStorage.getItem('supabase-url');
+  const key = localStorage.getItem('supabase-key');
+  if (!url || !key) {
+    syncStatus = 'offline';
+    updateSyncIndicator();
+    setupSupabaseConfig();
+    return;
+  }
+
+  updateSyncIndicator('connecting');
+  supabaseClient = supabase.createClient(url, key);
+
+  supabaseClient.from('trip_state').select('*').limit(1).maybeSingle()
+    .then(({ data, error }) => {
+      if (error) { console.log('⚠️ Supabase 查询失败:', error.message); syncStatus = 'offline'; updateSyncIndicator(); return; }
+      if (data) {
+        tripRowId = data.id;
+        if (data.state && data.state.data) {
+          lastSupabaseVersion = data.state.version || 0;
+          applyIncomingState({ ...data.state.data, version: data.state.version, lastModifiedBy: data.state.updated_by });
+          console.log('📥 从 Supabase 加载数据 (v' + (data.state.version || 0) + ')');
+        } else {
+          console.log('📤 上传本地数据到 Supabase (已有行)');
+          pushToSupabase();
+        }
+      } else {
+        console.log('📤 首次上传数据到 Supabase');
+        pushToSupabase();
+      }
+      syncStatus = 'online';
+      updateSyncIndicator();
+      // Subscribe to realtime changes
+      setupRealtimeChannel();
+    });
+}
+
+function setupRealtimeChannel() {
+  if (supabaseChannel) supabaseClient.removeChannel(supabaseChannel);
+  supabaseChannel = supabaseClient
+    .channel('trip_state_changes')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'trip_state' },
+      (payload) => {
+        const row = payload.new || payload.old;
+        if (!row || !row.state) return;
+        if (row.state.version > lastSupabaseVersion) {
+          lastSupabaseVersion = row.state.version;
+          applyIncomingState({ ...row.state.data, version: row.state.version, lastModifiedBy: row.state.updated_by });
+          console.log('⚡ 实时同步 (v' + row.state.version + ') ← ' + row.state.updated_by);
+        }
+      }
+    )
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        syncStatus = 'online';
+        updateSyncIndicator();
+      }
+    });
+}
+
+function connectToSupabase(url, key) {
+  localStorage.setItem('supabase-url', url);
+  localStorage.setItem('supabase-key', key);
+  if (supabaseChannel) supabaseClient.removeChannel(supabaseChannel);
+  initSupabase();
+}
+
+function updateSyncIndicator(status) {
+  const el = document.getElementById('sync-indicator');
+  if (!el) return;
+  const s = status || syncStatus;
+  if (s === 'online') {
+    el.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#4A9D5B;margin-right:4px;"></span> ☁️ Supabase 实时同步';
+    el.style.color = '#4A9D5B';
+  } else if (s === 'connecting') {
+    el.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#E8A92E;margin-right:4px;"></span> 连接中...';
+    el.style.color = '#E8A92E';
+  } else {
+    el.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A89B8C;margin-right:4px;"></span> 未配置同步 · 点击设置';
+    el.style.color = '#A89B8C';
+  }
+}
+
+function setupSupabaseConfig() {
+  const url = localStorage.getItem('supabase-url') || '';
+  const key = localStorage.getItem('supabase-key') || '';
+  showModal(`<h3>⚙️ 配置 Supabase 实时同步</h3>
+    <div style="font-size:13px;color:var(--c-text-secondary);margin-bottom:12px;line-height:1.6;">
+      Supabase 提供免费云数据库 + WebSocket 实时推送，支持多人同时在线协作。<br><br>
+      📋 <b>设置步骤：</b><br>
+      1. 打开 <a href="https://supabase.com" target="_blank" style="color:var(--c-secondary);">supabase.com</a>，用 GitHub 登录<br>
+      2. 创建新项目（免费），记下数据库密码<br>
+      3. 进入 Settings → API，复制 <b>Project URL</b> 和 <b>anon public key</b><br>
+      4. 进入 SQL Editor，运行下方建表语句<br>
+      5. 贴入下方完成配置
+    </div>
+    <details style="margin-bottom:12px;font-size:12px;">
+      <summary style="cursor:pointer;color:var(--c-secondary);">📝 点击展开 SQL 建表语句</summary>
+      <pre style="background:var(--c-surface-alt);padding:10px;border-radius:var(--radius-sm);overflow-x:auto;margin-top:8px;font-size:11px;line-height:1.5;">CREATE TABLE trip_state (
+  id bigint PRIMARY KEY DEFAULT 1,
+  state jsonb NOT NULL DEFAULT '{}'::jsonb,
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE trip_state ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all" ON trip_state FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO trip_state (id, state) VALUES (1, '{}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE trip_state;</pre>
+    </details>
+    <div class="form-group"><label>Project URL</label>
+      <input type="text" id="supa-url" value="${esc(url)}" placeholder="https://xxxxx.supabase.co" style="width:100%;padding:10px;border:1.5px solid var(--c-border);border-radius:var(--radius-sm);font-size:14px;font-family:monospace;">
+    </div>
+    <div class="form-group"><label>anon public key</label>
+      <input type="text" id="supa-key" value="${esc(key)}" placeholder="eyJhbGciOiJIUzI1NiIs..." style="width:100%;padding:10px;border:1.5px solid var(--c-border);border-radius:var(--radius-sm);font-size:14px;font-family:monospace;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveSupabaseConfig()">连接</button>
+    </div>`);
+}
+
+function saveSupabaseConfig() {
+  const url = document.getElementById('supa-url').value.trim();
+  const key = document.getElementById('supa-key').value.trim();
+  if (!url || !key) { showToast('请填写 Project URL 和 anon key'); return; }
+  closeModal();
+  showToast('⏳ 正在连接 Supabase...');
+  connectToSupabase(url, key);
+}
+
+function pushToSupabase() {
+  if (!supabaseClient) return;
+  const m = getMember(state.currentUser);
+  const d = {
+    tasks: state.tasks, expenses: state.expenses, packing: state.packing,
+    activities: state.activities, itinerary: state.itinerary,
+    expandedDays: [...state.expandedDays]
+  };
+  const sig = JSON.stringify(d);
+  if (sig === lastBroadcast) return;
+  const newVersion = lastSupabaseVersion + 1;
+  const payload = { state: { data: d, version: newVersion, updated_by: m ? m.name : '有人' }, updated_at: new Date().toISOString() };
+
+  const op = tripRowId
+    ? supabaseClient.from('trip_state').update(payload).eq('id', tripRowId)
+    : supabaseClient.from('trip_state').insert(payload).select('id').single();
+
+  op.then(({ data: result, error }) => {
+    if (!error) {
+      if (!tripRowId && result) tripRowId = result.id;
+      lastSupabaseVersion = newVersion; lastBroadcast = sig; updateSyncIndicator('online');
+      console.log('✅ 数据已同步到 Supabase (v' + newVersion + ')');
+    } else {
+      console.log('⚠️ pushToSupabase 失败:', error.message);
+    }
+  }).catch(err => { console.log('pushToSupabase error:', err); });
+}
+
+function applyIncomingState(data) {
+  if (!data) return;
+
+  if (data.tasks) state.tasks = data.tasks;
+  if (data.expenses) state.expenses = data.expenses;
+  if (data.packing) state.packing = data.packing;
+  if (data.activities) state.activities = data.activities;
+  if (data.itinerary) state.itinerary = data.itinerary;
+  // Keep structural city names in sync with code defaults
+  state.itinerary.forEach((day, i) => {
+    if (INITIAL_ITINERARY[i] && INITIAL_ITINERARY[i].city) {
+      day.city = INITIAL_ITINERARY[i].city;
+    }
+  });
+  // Migration: force-update Day 10 & 11 itinerary (Oct 5-6 Florence/Rome revised schedule)
+  // Signature-based: re-runs whenever stale data arrives (initial fetch / realtime)
+  const migratedD10D11 = migrateItineraryD10D11();
+  if (data.expandedDays) state.expandedDays = new Set(data.expandedDays);
+  lastSupabaseVersion = data.version || lastSupabaseVersion;
+
+  // Save the migrated state (not raw data) to localStorage
+  persistState();
+  // If migration ran, push corrected itinerary back to Supabase
+  if (migratedD10D11) pushToSupabase();
+
+  const v = state.currentView, el = document.getElementById('content');
+  if (v !== 'map') {
+    switch(v) {
+      case 'dashboard': renderDashboard(el); break;
+      case 'itinerary': renderItinerary(el); break;
+      case 'tasks': renderTasks(el); break;
+      case 'packing': renderPacking(el); break;
+      case 'expenses': renderExpenses(el); break;
+      case 'members': renderMembers(el); break;
+      case 'activity': renderActivityLog(el); break;
+    }
+  }
+  updateTaskBadge();
+  updatePackingBadge();
+}
+
+/* ================================================================
+   INIT
+   ================================================================ */
+async function fetchExchangeRate() {
+  try {
+    const resp = await fetch('https://api.frankfurter.app/latest?from=EUR&to=CNY');
+    const data = await resp.json();
+    if (data.rates && data.rates.CNY) {
+      eurToCny = Math.round(data.rates.CNY * 100) / 100;
+      const el = document.getElementById('eur-rate-display');
+      if (el) el.textContent = eurToCny;
+      const contentEl = document.getElementById('content');
+      if (contentEl && (state.currentView === 'dashboard' || state.currentView === 'expenses')) {
+        switch (state.currentView) {
+          case 'dashboard': renderDashboard(contentEl); break;
+          case 'expenses': renderExpenses(contentEl); break;
+        }
+      }
+    }
+  } catch(e) {
+    console.log('汇率获取失败，使用默认汇率 ¥' + eurToCny);
+  }
+}
+loadState();renderCurrentUser();renderUserDropdown();updateTaskBadge();updatePackingBadge();switchView('dashboard');
+initSupabase();
+fetchExchangeRate();
+fetchItineraryWeather();
+
+console.log('意大利旅行协作工作台已就绪');
+console.log('👥 6人协作：刘意、单婧怡、严泽淳、黄玉婷、李心怡、何鸿蔚');
+console.log('📱 支持手机端访问');
+console.log('☁️ 点击左下角状态指示器配置云端同步');
+
+// 注册 Service Worker（支持添加到手机主屏幕）
+// 注意：URL 带版本参数用于缓存穿透，每次更新 SW 必须 bump 该版本号，否则浏览器可能用 HTTP 缓存中的旧 sw.js 导致检测不到更新
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js?v=13').then(reg => { reg.update(); console.log('SW registered v13'); }).catch(() => {})
+    .catch(err => console.warn('SW registration failed', err));
+}
+</script>
+</body>
+</html>
