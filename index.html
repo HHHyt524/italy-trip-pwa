@@ -206,6 +206,25 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
 .category-bar{height:8px;border-radius:4px;background:var(--c-surface-alt);overflow:hidden;margin-top:6px}
 .category-bar-fill{height:100%;border-radius:4px;transition:width .5s}
 
+/* ===== Files ===== */
+.file-cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.file-cat-btn{padding:5px 14px;border-radius:20px;border:1.5px solid var(--c-border);background:var(--c-surface);cursor:pointer;font-size:12px;font-weight:600;color:var(--c-text-secondary);transition:all .15s;font-family:inherit}
+.file-cat-btn:hover,.file-cat-btn.active{border-color:var(--c-primary);background:var(--c-primary);color:#fff}
+.files-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.file-card{background:var(--c-surface);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);border:1px solid var(--c-border);display:flex;gap:14px;align-items:flex-start;transition:all .2s}
+.file-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.file-card .fc-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.file-card .fc-body{flex:1;min-width:0}
+.file-card .fc-name{font-size:14px;font-weight:600;word-break:break-all;line-height:1.4}
+.file-card .fc-meta{font-size:11px;color:var(--c-text-light);margin-top:6px;display:flex;gap:10px;flex-wrap:wrap}
+.file-card .fc-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.file-upload-box{border:2px dashed var(--c-border);border-radius:var(--radius-sm);padding:22px;text-align:center;cursor:pointer;transition:all .15s;background:var(--c-surface-alt)}
+.file-upload-box:hover{border-color:var(--c-primary);background:var(--c-primary-light)}
+.file-cat-pick{display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 6px;border-radius:8px;border:2px solid var(--c-border);cursor:pointer;font-size:12px;font-weight:600;color:var(--c-text-secondary);background:var(--c-surface);text-align:center;transition:all .15s}
+.file-cat-pick input{display:none}
+.file-cat-pick:hover{border-color:var(--fc-color);color:var(--fc-color)}
+.file-cat-pick.sel{border-color:var(--fc-color);background:var(--fc-bg);color:var(--fc-color)}
+
 /* ===== Members ===== */
 .member-card{background:var(--c-surface);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);border:1px solid var(--c-border);text-align:center;cursor:pointer;transition:all .15s;position:relative}
 .member-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
@@ -361,6 +380,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
       <div class="nav-item" data-view="packing"><span class="icon">🧳</span> 行李准备 <span class="badge" id="packing-badge" style="background:#4EA347;">0</span></div>
       <div class="nav-item" data-view="expenses"><span class="icon">💰</span> 记账本</div>
       <div class="nav-item" data-view="members"><span class="icon">👥</span> 成员</div>
+      <div class="nav-item" data-view="files"><span class="icon">📁</span> 文件资料 <span class="badge" id="file-badge" style="background:#7B5EA7;">0</span></div>
       <div class="nav-item" data-view="activity"><span class="icon">📋</span> 协同记录</div>
     </nav>
     <div class="sidebar-footer">
@@ -378,7 +398,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
       <div id="sync-indicator" style="font-size:11px;margin-top:10px;text-align:center;cursor:pointer;" onclick="setupSupabaseConfig()" title="点击配置 Supabase 实时同步">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A89B8C;margin-right:4px;"></span> 离线模式
       </div>
-      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260821.3</div>
+      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260827.1</div>
     </div>
   </aside>
 
@@ -757,6 +777,7 @@ let state = {
   expenses: JSON.parse(JSON.stringify(INITIAL_EXPENSES)),
   packing: JSON.parse(JSON.stringify(INITIAL_PACKING)),
   activities: [],
+  files: [],
   currentUser: 4,
   currentView: 'dashboard',
   expandedDays: new Set([1]),
@@ -790,6 +811,7 @@ function migrateItineraryD10D11() {
 function persistState() {
   try { localStorage.setItem('italy-trip-v2', JSON.stringify({
     tasks: state.tasks, expenses: state.expenses, packing: state.packing, activities: state.activities,
+    files: state.files,
     itinerary: state.itinerary, currentUser: state.currentUser,
     expandedDays: [...state.expandedDays], currentView: state.currentView,
     activityFilter: state.activityFilter,
@@ -800,6 +822,7 @@ function saveState() {
   try {
     const d = {
       tasks: state.tasks, expenses: state.expenses, packing: state.packing, activities: state.activities,
+      files: state.files,
       itinerary: state.itinerary, currentUser: state.currentUser,
       expandedDays: [...state.expandedDays], currentView: state.currentView,
       activityFilter: state.activityFilter,
@@ -819,6 +842,7 @@ function loadState() {
       if (d.expenses && d.expenses.length) state.expenses = d.expenses;
       if (d.packing && d.packing.length) state.packing = d.packing;
       if (d.activities && d.activities.length) state.activities = d.activities;
+      if (d.files) state.files = d.files;
       if (d.itinerary && d.itinerary.length) state.itinerary = d.itinerary;
       // Keep structural city names in sync with code defaults (preserve user edits to activities/notes)
       state.itinerary.forEach((day, i) => {
@@ -920,6 +944,7 @@ const VIEW_CFG = {
   packing:{title:'行李准备',desc:'出行必备清单 · 按人分配 · 逐项打勾'},
   expenses:{title:'记账本',desc:'公用/个人费用分离 · 自动AA分摊'},
   members:{title:'团队成员',desc:'6人协作 · 按行程分工'},
+  files:{title:'文件资料',desc:'门票 · 酒店 · 餐厅 · 机票 · 云端存储实时同步'},
   activity:{title:'协同记录',desc:'所有人的操作历史 · 按人筛选'},
 };
 
@@ -935,6 +960,7 @@ function switchView(v) {
     case'packing':h.innerHTML='<button class="btn btn-primary btn-sm" onclick="openPackingModal()">+ 添加行李项</button>';renderPacking(el);break;
     case'expenses':h.innerHTML='<button class="btn btn-primary btn-sm" onclick="openExpenseModal()">+ 记一笔账</button>';renderExpenses(el);break;
     case'members':renderMembers(el);break;
+    case'files':h.innerHTML='<button class="btn btn-primary btn-sm" onclick="openFileUploadModal()">📤 上传文件</button>';renderFiles(el);break;
     case'activity':renderActivityLog(el);break;
   }
   if(v!=='map'&&mapInstance){mapInstance.remove();mapInstance=null}
@@ -1552,6 +1578,11 @@ function updatePackingBadge() {
   badge.style.background = checked===total && total>0 ? '#4EA347' : '#A89B8C';
 }
 
+function updateFileBadge() {
+  const badge = document.getElementById('file-badge');
+  if(badge) badge.textContent = state.files ? state.files.length : 0;
+}
+
 function renderPacking(el) {
   const filter = state.packingFilter || 'all';
   const sorted = [...state.packing].sort((a,b)=>{
@@ -1686,6 +1717,181 @@ function openExpenseModal(eid){const ie=eid!==undefined;const e=ie?state.expense
 function toggleExpSplit(){const shared=document.querySelector('input[name="exp-shared"]:checked').value==='1';document.getElementById('exp-split-group').style.display=shared?'block':'none'}
 function saveExpense(eid){const isShared=document.querySelector('input[name="exp-shared"]:checked').value==='1';const splitAmong=isShared?[...document.querySelectorAll('#modal input[type=checkbox]:checked')].map(cb=>parseInt(cb.value)):[];if(isShared&&splitAmong.length===0){showToast('请选择至少一人分摊');return}const d={item:document.getElementById('exp-item').value.trim(),amount:parseFloat(document.getElementById('exp-amount').value)||0,currency:document.getElementById('exp-currency').value,category:document.getElementById('exp-category').value,date:document.getElementById('exp-date').value,payerId:parseInt(document.getElementById('exp-payer').value),isShared,splitAmong:isShared?splitAmong:[],note:document.getElementById('exp-note').value.trim()};if(!d.item||d.amount<=0){showToast('请填写项目和金额');return}if(eid>=0){Object.assign(state.expenses.find(e=>e.id===eid),d);logActivity(`编辑了账目"${d.item}"`)}else{d.id=nextId(state.expenses);state.expenses.push(d);logActivity(`记录了${d.isShared?'公用':'个人'}消费"${d.item}"`)}saveState();closeModal();renderExpenses(document.getElementById('content'));showToast('保存成功')}
 function deleteExpense(id){const e=state.expenses.find(x=>x.id===id);state.expenses=state.expenses.filter(x=>x.id!==id);logActivity(`删除了账目"${e.item}"`);saveState();renderExpenses(document.getElementById('content'));showToast('已删除')}
+
+/* ================================================================
+   FILES (门票/酒店/餐厅/机票 PDF 云端存储)
+   文件本体存 Supabase Storage (bucket: trip-files, public)
+   元数据存 state.files → 走现有实时同步通道分发到所有设备
+   ================================================================ */
+const FILE_CATS = {
+  ticket:     { label:'门票', icon:'🎟️', color:'#C5283D', bg:'#FDE8E0' },
+  hotel:      { label:'酒店', icon:'🏨', color:'#7B5EA7', bg:'#F3E8FF' },
+  restaurant: { label:'餐厅', icon:'🍝', color:'#D9622E', bg:'#FEF3C7' },
+  flight:     { label:'机票', icon:'✈️', color:'#2E7D8F', bg:'#DBEAFE' },
+  other:      { label:'其他', icon:'📄', color:'#A89B8C', bg:'#F0EDE8' },
+};
+let fileCatFilter = 'all';
+
+function fileCatInfo(c){ return FILE_CATS[c] || FILE_CATS.other }
+function fmtFileSize(b){ if(b<1024)return b+' B'; if(b<1048576)return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB' }
+function filePublicUrl(f){
+  const base = (localStorage.getItem('supabase-url')||'').replace(/\/+$/,'');
+  return base + '/storage/v1/object/public/trip-files/' + f.path;
+}
+
+function renderFiles(el) {
+  const files = state.files || [];
+  const totalSize = files.reduce((s,f)=>s+(f.size||0),0);
+  const uploaders = new Set(files.map(f=>f.uploaderId)).size;
+  const lastFile = files.length ? files[0] : null;
+  const filtered = fileCatFilter==='all' ? files : files.filter(f=>f.category===fileCatFilter);
+  const catsCount = {};
+  files.forEach(f=>{ catsCount[f.category]=(catsCount[f.category]||0)+1 });
+
+  el.innerHTML=`
+    <div class="expense-summary">
+      <div class="summary-box">
+        <div class="sb-icon" style="background:linear-gradient(135deg,#F3E8FF,#E9D5FF);">📁</div>
+        <div class="sb-content"><div class="sb-value" style="color:#7B5EA7;">${files.length}</div><div class="sb-label">文件总数</div><div class="sb-sub">${Object.entries(catsCount).map(([c,n])=>fileCatInfo(c).icon+' '+n).join(' · ')||'暂无文件'}</div></div>
+      </div>
+      <div class="summary-box">
+        <div class="sb-icon" style="background:linear-gradient(135deg,#E0F2FE,#BAE6FD);">💾</div>
+        <div class="sb-content"><div class="sb-value" style="color:var(--c-secondary);">${fmtFileSize(totalSize)}</div><div class="sb-label">占用空间</div><div class="sb-sub">Supabase 免费 1GB</div></div>
+      </div>
+      <div class="summary-box">
+        <div class="sb-icon" style="background:linear-gradient(135deg,#DCFCE7,#BBF7D0);">👥</div>
+        <div class="sb-content"><div class="sb-value" style="color:#16A34A;">${uploaders}人</div><div class="sb-label">已上传</div><div class="sb-sub">${files.length?'所有人实时可见':'等待第一个文件'}</div></div>
+      </div>
+      <div class="summary-box">
+        <div class="sb-icon" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);">🕒</div>
+        <div class="sb-content"><div class="sb-value" style="color:#D97706;font-size:18px;">${lastFile?fmtTimeAgo(lastFile.time):'—'}</div><div class="sb-label">最近上传</div><div class="sb-sub">${lastFile?lastFile.name:'暂无'}</div></div>
+      </div>
+    </div>
+
+    <div class="file-cats">
+      <button class="file-cat-btn ${fileCatFilter==='all'?'active':''}" onclick="setFileCatFilter('all')">全部 (${files.length})</button>
+      ${Object.entries(FILE_CATS).map(([k,c])=>`<button class="file-cat-btn ${fileCatFilter===k?'active':''}" onclick="setFileCatFilter('${k}')">${c.icon} ${c.label} (${catsCount[k]||0})</button>`).join('')}
+    </div>
+
+    ${!supabaseClient?`<div class="card" style="margin-bottom:16px;border-left:4px solid #E8A92E;"><div class="card-title">⚠️ 未配置云端同步</div><div style="font-size:13px;color:var(--c-text-secondary);line-height:1.8;">文件上传需要 Supabase 云端存储。请点击左下角状态指示器配置 Supabase（含 Storage 存储桶），配置完成后即可上传并实时同步。<br><button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="setupSupabaseConfig()">⚙️ 立即配置</button></div></div>`:''}
+
+    ${files.length===0?`<div class="card"><div class="empty-state" style="text-align:center;padding:40px 20px;color:var(--c-text-light);font-size:14px;">📁 还没有任何文件<br><span style="font-size:12px;">点击右上角「上传文件」添加门票、酒店预订、餐厅预订、机票等 PDF，全部成员实时可见</span></div></div>`:
+    `<div class="files-grid">
+      ${filtered.length===0?`<div class="card" style="grid-column:1/-1;text-align:center;padding:30px;color:var(--c-text-light);">该分类下暂无文件</div>`:
+      filtered.map(f=>{
+        const c=fileCatInfo(f.category);
+        const m=getMember(f.uploaderId);
+        return`<div class="file-card">
+          <div class="fc-icon" style="background:${c.bg};color:${c.color};">${c.icon}</div>
+          <div class="fc-body">
+            <div class="fc-name" title="${esc(f.name)}">${esc(f.name)}</div>
+            <div style="margin-top:6px;"><span class="tag" style="background:${c.bg};color:${c.color};">${c.icon} ${c.label}</span>${f.size?`<span style="font-size:11px;color:var(--c-text-light);margin-left:8px;">${fmtFileSize(f.size)}</span>`:''}</div>
+            <div class="fc-meta">
+              <span>⬆️ ${esc(f.uploader||'')}</span>
+              <span>🕒 ${fmtTimeAgo(f.time)}</span>
+            </div>
+            <div class="fc-actions">
+              <button class="btn btn-primary btn-xs" onclick="openFile(${f.id})">📖 查看</button>
+              <button class="btn btn-outline btn-xs" onclick="downloadFile(${f.id})">⬇️ 下载</button>
+              <button class="btn btn-outline btn-xs" onclick="deleteFile(${f.id})">🗑 删除</button>
+            </div>
+          </div>
+        </div>`}).join('')}
+    </div>`}`;
+}
+
+function setFileCatFilter(k){ fileCatFilter = k; renderFiles(document.getElementById('content')) }
+
+function openFileUploadModal() {
+  if (!supabaseClient) { showToast('请先配置 Supabase 云端同步'); setupSupabaseConfig(); return; }
+  const cats = Object.entries(FILE_CATS).map(([k,c],i)=>`
+    <label class="file-cat-pick ${i===0?'sel':''}" style="--fc-color:${c.color};--fc-bg:${c.bg};">
+      <input type="radio" name="file-cat" value="${k}" ${i===0?'checked':''} onchange="this.parentElement.parentElement.querySelectorAll('.file-cat-pick').forEach(l=>l.classList.remove('sel'));this.parentElement.classList.add('sel')">
+      ${c.icon} ${c.label}
+    </label>`).join('');
+  showModal(`<h3>📤 上传文件</h3>
+    <div style="font-size:13px;color:var(--c-text-secondary);margin-bottom:12px;line-height:1.7;">
+      支持 <b>PDF / 图片</b>（门票、酒店预订单、餐厅预订、机票行程单等），单个文件不超过 <b>20MB</b>。<br>
+      文件将上传到 <b>Supabase 云端存储</b>，所有成员实时同步可见。
+    </div>
+    <div class="form-group"><label>选择文件</label>
+      <div class="file-upload-box" onclick="document.getElementById('file-input').click()">
+        <div style="font-size:32px;">📎</div>
+        <div style="font-size:14px;font-weight:600;">点击选择文件</div>
+        <div style="font-size:11px;color:var(--c-text-light);" id="file-chosen">支持 .pdf / .jpg / .png</div>
+      </div>
+      <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="document.getElementById('file-chosen').textContent=this.files[0]?('已选择: '+this.files[0].name+' ('+(this.files[0].size/1048576).toFixed(1)+'MB)'):'支持 .pdf / .jpg / .png'">
+    </div>
+    <div class="form-group"><label>文件分类</label>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">${cats}</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="confirmFileUpload()">⬆️ 上传</button>
+    </div>`);
+}
+
+function confirmFileUpload() {
+  const input = document.getElementById('file-input');
+  const file = input && input.files && input.files[0];
+  if (!file) { showToast('请先选择文件'); return; }
+  if (file.size > 20*1024*1024) { showToast('文件超过 20MB 限制'); return; }
+  const cat = (document.querySelector('input[name="file-cat"]:checked')||{}).value || 'other';
+  const m = getMember(state.currentUser);
+  closeModal();
+  showToast('⏳ 正在上传到云端...');
+  uploadFileToStorage(file, cat).then(path => {
+    const f = { id: Date.now(), name: file.name, category: cat, size: file.size, path: path, uploader: m.name, uploaderId: m.id, time: Date.now() };
+    state.files.unshift(f);
+    logActivity(`上传了文件「${file.name}」`);
+    saveState();
+    updateFileBadge();
+    renderFiles(document.getElementById('content'));
+    showToast('✅ 上传成功，已实时同步');
+  }).catch(err => {
+    let msg = (err && err.message) || String(err);
+    if (msg.includes('Bucket not found') || msg.includes('bucket')) {
+      msg = '存储桶未创建，请按提示配置 Storage 后重试';
+      setupSupabaseConfig();
+    }
+    showToast('上传失败: ' + msg);
+  });
+}
+
+function uploadFileToStorage(file, cat) {
+  const safeName = Date.now() + '_' + Math.random().toString(36).slice(2,8) + '.' + (file.name.split('.').pop()||'bin').toLowerCase();
+  const path = cat + '/' + safeName;
+  return supabaseClient.storage.from('trip-files').upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false })
+    .then(({ error }) => { if (error) throw error; return path; });
+}
+
+function openFile(id) {
+  const f = (state.files||[]).find(x=>x.id===id);
+  if (!f) return;
+  window.open(filePublicUrl(f), '_blank');
+}
+function downloadFile(id) {
+  const f = (state.files||[]).find(x=>x.id===id);
+  if (!f) return;
+  const a = document.createElement('a');
+  a.href = filePublicUrl(f); a.download = f.name; a.target = '_blank';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function deleteFile(id) {
+  const f = (state.files||[]).find(x=>x.id===id);
+  if (!f) return;
+  if (!confirm(`确定删除文件「${f.name}」？此操作会从云端删除，所有成员将无法查看。`)) return;
+  if (supabaseClient) {
+    supabaseClient.storage.from('trip-files').remove([f.path]).then(({error})=>{
+      if (error) console.log('storage remove 失败(可能已被删):', error.message);
+    }).catch(()=>{});
+  }
+  state.files = state.files.filter(x=>x.id!==id);
+  logActivity(`删除了文件「${f.name}」`);
+  saveState(); updateFileBadge();
+  renderFiles(document.getElementById('content'));
+  showToast('已删除');
+}
 
 /* ================================================================
    MEMBERS (by itinerary responsibility)
@@ -1957,7 +2163,7 @@ function setupSupabaseConfig() {
       5. 贴入下方完成配置
     </div>
     <details style="margin-bottom:12px;font-size:12px;">
-      <summary style="cursor:pointer;color:var(--c-secondary);">📝 点击展开 SQL 建表语句</summary>
+      <summary style="cursor:pointer;color:var(--c-secondary);">📝 点击展开 SQL 建表语句（含文件存储桶）</summary>
       <pre style="background:var(--c-surface-alt);padding:10px;border-radius:var(--radius-sm);overflow-x:auto;margin-top:8px;font-size:11px;line-height:1.5;">CREATE TABLE trip_state (
   id bigint PRIMARY KEY DEFAULT 1,
   state jsonb NOT NULL DEFAULT '{}'::jsonb,
@@ -1970,7 +2176,16 @@ CREATE POLICY "Allow all" ON trip_state FOR ALL USING (true) WITH CHECK (true);
 INSERT INTO trip_state (id, state) VALUES (1, '{}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
-ALTER PUBLICATION supabase_realtime ADD TABLE trip_state;</pre>
+ALTER PUBLICATION supabase_realtime ADD TABLE trip_state;
+
+-- ===== 文件存储桶（门票/酒店/机票等 PDF 云端存储）=====
+INSERT INTO storage.buckets (id, name, public) VALUES ('trip-files', 'trip-files', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "trip-files public read" ON storage.objects FOR SELECT USING (bucket_id = 'trip-files');
+CREATE POLICY "trip-files anon upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'trip-files');
+CREATE POLICY "trip-files anon update" ON storage.objects FOR UPDATE USING (bucket_id = 'trip-files');
+CREATE POLICY "trip-files anon delete" ON storage.objects FOR DELETE USING (bucket_id = 'trip-files');</pre>
     </details>
     <div class="form-group"><label>Project URL</label>
       <input type="text" id="supa-url" value="${esc(url)}" placeholder="https://xxxxx.supabase.co" style="width:100%;padding:10px;border:1.5px solid var(--c-border);border-radius:var(--radius-sm);font-size:14px;font-family:monospace;">
@@ -1998,7 +2213,7 @@ function pushToSupabase() {
   const m = getMember(state.currentUser);
   const d = {
     tasks: state.tasks, expenses: state.expenses, packing: state.packing,
-    activities: state.activities, itinerary: state.itinerary,
+    activities: state.activities, files: state.files, itinerary: state.itinerary,
     expandedDays: [...state.expandedDays]
   };
   const sig = JSON.stringify(d);
@@ -2028,6 +2243,7 @@ function applyIncomingState(data) {
   if (data.expenses) state.expenses = data.expenses;
   if (data.packing) state.packing = data.packing;
   if (data.activities) state.activities = data.activities;
+  if (data.files) state.files = data.files;
   if (data.itinerary) state.itinerary = data.itinerary;
   // Keep structural city names in sync with code defaults
   state.itinerary.forEach((day, i) => {
@@ -2055,11 +2271,13 @@ function applyIncomingState(data) {
       case 'packing': renderPacking(el); break;
       case 'expenses': renderExpenses(el); break;
       case 'members': renderMembers(el); break;
+      case 'files': renderFiles(el); break;
       case 'activity': renderActivityLog(el); break;
     }
   }
   updateTaskBadge();
   updatePackingBadge();
+  updateFileBadge();
 }
 
 /* ================================================================
@@ -2085,7 +2303,7 @@ async function fetchExchangeRate() {
     console.log('汇率获取失败，使用默认汇率 ¥' + eurToCny);
   }
 }
-loadState();renderCurrentUser();renderUserDropdown();updateTaskBadge();updatePackingBadge();switchView('dashboard');
+loadState();renderCurrentUser();renderUserDropdown();updateTaskBadge();updatePackingBadge();updateFileBadge();switchView('dashboard');
 initSupabase();
 fetchExchangeRate();
 fetchItineraryWeather();
@@ -2098,7 +2316,7 @@ console.log('☁️ 点击左下角状态指示器配置云端同步');
 // 注册 Service Worker（支持添加到手机主屏幕）
 // 注意：URL 带版本参数用于缓存穿透，每次更新 SW 必须 bump 该版本号，否则浏览器可能用 HTTP 缓存中的旧 sw.js 导致检测不到更新
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js?v=13').then(reg => { reg.update(); console.log('SW registered v13'); }).catch(() => {})
+  navigator.serviceWorker.register('sw.js?v=14').then(reg => { reg.update(); console.log('SW registered v14'); }).catch(() => {})
     .catch(err => console.warn('SW registration failed', err));
 }
 </script>
