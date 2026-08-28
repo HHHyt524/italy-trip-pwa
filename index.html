@@ -398,7 +398,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
       <div id="sync-indicator" style="font-size:11px;margin-top:10px;text-align:center;cursor:pointer;" onclick="setupSupabaseConfig()" title="点击配置 Supabase 实时同步">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A89B8C;margin-right:4px;"></span> 离线模式
       </div>
-      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260827.1</div>
+      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260828.1</div>
     </div>
   </aside>
 
@@ -1720,8 +1720,9 @@ function deleteExpense(id){const e=state.expenses.find(x=>x.id===id);state.expen
 
 /* ================================================================
    FILES (门票/酒店/餐厅/机票 PDF 云端存储)
-   文件本体存 Supabase Storage (bucket: trip-files, public)
+   文件本体存 Supabase Storage (bucket: trip-files, private)
    元数据存 state.files → 走现有实时同步通道分发到所有设备
+   查看/下载使用 createSignedUrl 签名 URL（有效期 1 小时，过期自动失效）
    ================================================================ */
 const FILE_CATS = {
   ticket:     { label:'门票', icon:'🎟️', color:'#C5283D', bg:'#FDE8E0' },
@@ -1734,9 +1735,14 @@ let fileCatFilter = 'all';
 
 function fileCatInfo(c){ return FILE_CATS[c] || FILE_CATS.other }
 function fmtFileSize(b){ if(b<1024)return b+' B'; if(b<1048576)return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB' }
-function filePublicUrl(f){
-  const base = (localStorage.getItem('supabase-url')||'').replace(/\/+$/,'');
-  return base + '/storage/v1/object/public/trip-files/' + f.path;
+function fileSignedUrl(f){
+  // 私有桶：通过签名 URL 访问（有效期 3600 秒），旧链接过期后自动失效
+  if (!supabaseClient) return Promise.reject(new Error('未配置云端同步'));
+  return supabaseClient.storage.from('trip-files').createSignedUrl(f.path, 3600)
+    .then(({ data, error }) => {
+      if (error || !data || !data.signedUrl) throw new Error((error && error.message) || '签名 URL 获取失败');
+      return data.signedUrl;
+    });
 }
 
 function renderFiles(el) {
@@ -1868,14 +1874,21 @@ function uploadFileToStorage(file, cat) {
 function openFile(id) {
   const f = (state.files||[]).find(x=>x.id===id);
   if (!f) return;
-  window.open(filePublicUrl(f), '_blank');
+  if (!supabaseClient) { showToast('请先配置 Supabase 云端同步'); setupSupabaseConfig(); return; }
+  showToast('⏳ 正在获取安全链接...');
+  fileSignedUrl(f).then(url => { window.open(url, '_blank'); })
+    .catch(err => showToast('打开失败: ' + err.message));
 }
 function downloadFile(id) {
   const f = (state.files||[]).find(x=>x.id===id);
   if (!f) return;
-  const a = document.createElement('a');
-  a.href = filePublicUrl(f); a.download = f.name; a.target = '_blank';
-  document.body.appendChild(a); a.click(); a.remove();
+  if (!supabaseClient) { showToast('请先配置 Supabase 云端同步'); setupSupabaseConfig(); return; }
+  showToast('⏳ 正在获取安全链接...');
+  fileSignedUrl(f).then(url => {
+    const a = document.createElement('a');
+    a.href = url; a.download = f.name; a.target = '_blank';
+    document.body.appendChild(a); a.click(); a.remove();
+  }).catch(err => showToast('下载失败: ' + err.message));
 }
 function deleteFile(id) {
   const f = (state.files||[]).find(x=>x.id===id);
@@ -2178,11 +2191,14 @@ ON CONFLICT (id) DO NOTHING;
 
 ALTER PUBLICATION supabase_realtime ADD TABLE trip_state;
 
--- ===== 文件存储桶（门票/酒店/机票等 PDF 云端存储）=====
-INSERT INTO storage.buckets (id, name, public) VALUES ('trip-files', 'trip-files', true)
+-- ===== 文件存储桶（门票/酒店/机票等 PDF 云端存储，私有桶+签名URL保护）=====
+INSERT INTO storage.buckets (id, name, public) VALUES ('trip-files', 'trip-files', false)
 ON CONFLICT (id) DO NOTHING;
 
-CREATE POLICY "trip-files public read" ON storage.objects FOR SELECT USING (bucket_id = 'trip-files');
+-- 若桶此前建为 public，此语句将其转为私有（已配置过旧版的项目运行一次）
+UPDATE storage.buckets SET public = false WHERE id = 'trip-files';
+
+CREATE POLICY "trip-files anon read" ON storage.objects FOR SELECT USING (bucket_id = 'trip-files');
 CREATE POLICY "trip-files anon upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'trip-files');
 CREATE POLICY "trip-files anon update" ON storage.objects FOR UPDATE USING (bucket_id = 'trip-files');
 CREATE POLICY "trip-files anon delete" ON storage.objects FOR DELETE USING (bucket_id = 'trip-files');</pre>
@@ -2316,7 +2332,7 @@ console.log('☁️ 点击左下角状态指示器配置云端同步');
 // 注册 Service Worker（支持添加到手机主屏幕）
 // 注意：URL 带版本参数用于缓存穿透，每次更新 SW 必须 bump 该版本号，否则浏览器可能用 HTTP 缓存中的旧 sw.js 导致检测不到更新
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js?v=14').then(reg => { reg.update(); console.log('SW registered v14'); }).catch(() => {})
+  navigator.serviceWorker.register('sw.js?v=15').then(reg => { reg.update(); console.log('SW registered v15'); }).catch(() => {})
     .catch(err => console.warn('SW registration failed', err));
 }
 </script>
