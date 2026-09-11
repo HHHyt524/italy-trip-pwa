@@ -398,7 +398,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
       <div id="sync-indicator" style="font-size:11px;margin-top:10px;text-align:center;cursor:pointer;" onclick="setupSupabaseConfig()" title="点击配置 Supabase 实时同步">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A89B8C;margin-right:4px;"></span> 离线模式
       </div>
-      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260911.2</div>
+      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260911.3</div>
     </div>
   </aside>
 
@@ -1030,9 +1030,9 @@ function renderDashboard(el) {
     ${(()=>{
       if (!weatherCache) return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报</div><div style="padding:20px;text-align:center;color:var(--c-text-light);font-size:13px;">正在获取沿途城市天气…</div></div>`;
       const available = weatherCache.filter(w=>!w.pending);
-      if (available.length === 0) return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报</div><div style="padding:20px;text-align:center;color:var(--c-text-light);font-size:13px;">暂无可用预报（出行日期较远，Open-Meteo 最长支持未来 16 天，临近出发自动更新）</div></div>`;
       const pendingCount = weatherCache.filter(w=>w.pending).length;
-      return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报 <span style="font-weight:400;color:var(--c-text-light);font-size:12px;">(数据来源 Open-Meteo${pendingCount>0?` · ${pendingCount} 天待出`:''})</span></div>
+      return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报 <span style="font-weight:400;color:var(--c-text-light);font-size:12px;">(数据来源 Open-Meteo${available.length>0?` · ${available.length} 天已出`:''}${pendingCount>0?` · ${pendingCount} 天待出`:''})</span></div>
+      ${available.length===0?`<div style="padding:8px 16px 4px;font-size:12px;color:var(--c-text-light);line-height:1.5;">出行日期接近预报最远边界，数据将在临近出发时自动补齐，每天滚动更新。</div>`:''}
       <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;">
         ${weatherCache.map(w=>{
           if (w.pending) {
@@ -2349,7 +2349,7 @@ console.log('☁️ 点击左下角状态指示器配置云端同步');
 // 注册 Service Worker（支持添加到手机主屏幕）
 // 注意：URL 带版本参数用于缓存穿透，每次更新 SW 必须 bump 该版本号，否则浏览器可能用 HTTP 缓存中的旧 sw.js 导致检测不到更新
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js?v=17').then(reg => { reg.update(); console.log('SW registered v17'); }).catch(() => {})
+  navigator.serviceWorker.register('sw.js?v=18').then(reg => { reg.update(); console.log('SW registered v18'); }).catch(() => {})
     .catch(err => console.warn('SW registration failed', err));
 }
 </script>
