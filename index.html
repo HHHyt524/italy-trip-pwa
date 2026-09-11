@@ -11,12 +11,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="意大利旅行">
 <meta name="application-name" content="意大利旅行工作台">
-<meta name="description" content="6人同行意大利12日深度游，协同攻略、地图路线、记账分账">
+<meta name="description" content="5人同行意大利12日深度游，协同攻略、地图路线、记账分账">
 <title>意大利旅行工作台</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <meta property="og:title" content="意大利旅行工作台">
-<meta property="og:description" content="6人同行意大利12日深度游，协同攻略、地图路线、记账分账">
+<meta property="og:description" content="5人同行意大利12日深度游，协同攻略、地图路线、记账分账">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -370,7 +370,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="trip-title">意大利旅行工作台</div>
-      <div class="trip-sub">2026.09.26 — 10.07 · 6人同行</div>
+      <div class="trip-sub">2026.09.26 — 10.07 · 5人同行</div>
     </div>
     <nav class="nav" id="nav">
       <div class="nav-item active" data-view="dashboard"><span class="icon">🏠</span> 概览</div>
@@ -389,7 +389,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
           <div class="avatar" id="cu-avatar"></div>
           <div class="user-info">
             <div class="user-name" id="cu-name"></div>
-            <div class="user-responsibility" id="cu-responsibility"></div>
+            <div class="user-responsibility" id="cu-responsibility" style="display:none;"></div>
           </div>
           <span class="switch-icon">⇅</span>
         </div>
@@ -398,7 +398,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
       <div id="sync-indicator" style="font-size:11px;margin-top:10px;text-align:center;cursor:pointer;" onclick="setupSupabaseConfig()" title="点击配置 Supabase 实时同步">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A89B8C;margin-right:4px;"></span> 离线模式
       </div>
-      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260911.1</div>
+      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260911.2</div>
     </div>
   </aside>
 
@@ -458,12 +458,11 @@ const JY_AVATAR = '<img src="avatar-jy.jpg" class="member-avatar-img" alt="单�
 const LY_AVATAR = '<img src="avatar-ly.jpg" class="member-avatar-img" alt="刘意">';
 
 const MEMBERS = [
-  { id:5, name:'李心怡', duty:'罗马行程 D1-3', avatar:LXY_AVATAR, color:'#7B5EA7' },
-  { id:4, name:'黄玉婷', duty:'罗马行程 D1-3', avatar:MINION_AVATAR, color:'#C5283D' },
-  { id:1, name:'刘意', duty:'南意行程 D4-6', avatar:LY_AVATAR, color:'#D9622E' },
-  { id:2, name:'单婧怡', duty:'南意行程 D4-6', avatar:JY_AVATAR, color:'#2E7D8F' },
-  { id:3, name:'严泽淳', duty:'托斯卡纳行程 D7-9', avatar:YZC_AVATAR, color:'#4A9D5B' },
-  { id:6, name:'何鸿蔚', duty:'佛罗伦萨行程 D10-11', avatar:'🦁', color:'#E8A92E' },
+  { id:5, name:'李心怡', avatar:LXY_AVATAR, color:'#7B5EA7' },
+  { id:4, name:'黄玉婷', avatar:MINION_AVATAR, color:'#C5283D' },
+  { id:1, name:'刘意', avatar:LY_AVATAR, color:'#D9622E' },
+  { id:2, name:'单婧怡', avatar:JY_AVATAR, color:'#2E7D8F' },
+  { id:3, name:'严泽淳', avatar:YZC_AVATAR, color:'#4A9D5B' },
 ];
 
 const CITY_COLORS = {
@@ -952,7 +951,7 @@ const VIEW_CFG = {
   tasks:{title:'备忘待办',desc:'抢票预订 · 打包清单 · 交通提醒 · 美食推荐'},
   packing:{title:'行李准备',desc:'出行必备清单 · 按人分配 · 逐项打勾'},
   expenses:{title:'记账本',desc:'公用/个人费用分离 · 自动AA分摊'},
-  members:{title:'团队成员',desc:'6人协作 · 按行程分工'},
+  members:{title:'团队成员',desc:'5人协作'},
   files:{title:'文件资料',desc:'门票 · 酒店 · 餐厅 · 机票 · 云端存储实时同步'},
   activity:{title:'协同记录',desc:'所有人的操作历史 · 按人筛选'},
 };
@@ -999,7 +998,7 @@ function renderDashboard(el) {
     <div style="margin-bottom:24px;">
       <div style="display:flex;gap:16px;align-items:center;background:linear-gradient(135deg,#D9622E,#C5283D);color:#fff;border-radius:16px;padding:28px;position:relative;overflow:hidden;" class="dash-hero">
         <div style="flex:1;">
-          <div style="font-size:13px;opacity:.85;margin-bottom:4px;">即将出发 · 6人同行</div>
+          <div style="font-size:13px;opacity:.85;margin-bottom:4px;">即将出发 · 5人同行</div>
           <div style="font-size:32px;font-weight:800;margin-bottom:6px;">意大利12日深度游</div>
           <div style="font-size:14px;opacity:.9;">罗马 → 索伦托 → 卡普里 → 波西塔诺 → 托斯卡纳 → 佛罗伦萨 → 罗马</div>
           <div class="hero-bottom-row" style="margin-top:12px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
@@ -1080,7 +1079,7 @@ function renderDashboard(el) {
     <div class="grid-2">
       <div class="card">
         <div class="card-title">👥 团队成员</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">${MEMBERS.map(m=>`<div style="text-align:center;min-width:64px;"><div style="width:42px;height:42px;border-radius:50%;background:${m.color}20;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 4px;border:2px solid ${m.color};">${m.avatar}</div><div style="font-size:11px;font-weight:600;">${m.name}</div><div style="font-size:10px;color:var(--c-text-secondary);max-width:72px;">${m.duty}</div></div>`).join('')}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${MEMBERS.map(m=>`<div style="text-align:center;min-width:64px;"><div style="width:42px;height:42px;border-radius:50%;background:${m.color}20;display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 4px;border:2px solid ${m.color};">${m.avatar}</div><div style="font-size:11px;font-weight:600;">${m.name}</div></div>`).join('')}</div>
       </div>
       <div class="card">
         <div class="card-title">📊 费用概览</div>
@@ -1537,7 +1536,7 @@ function savePackingItem(editId) {
       MEMBERS.forEach((m,i)=>{
         state.packing.push({...data, assignee: m.id, sharedGroup: groupId, id: maxId+1+i, checked: oldChecked});
       });
-      logActivity('将"'+data.item+'"改为全员必带（已同步到6人清单）');
+      logActivity('将"'+data.item+'"改为全员必带（已同步到5人清单）');
     } else {
       // 非共享→非共享：直接更新
       const idx = state.packing.findIndex(p=>p.id===editId);
@@ -1551,7 +1550,7 @@ function savePackingItem(editId) {
       MEMBERS.forEach((m,i)=>{
         state.packing.push({...data, assignee: m.id, sharedGroup: groupId, id: maxId+1+i});
       });
-      logActivity('添加了全员必带"'+data.item+'"（已同步到6人清单）');
+      logActivity('添加了全员必带"'+data.item+'（已同步到5人清单）');
     } else {
       const maxId = state.packing.reduce((m,p)=>Math.max(m,p.id),0);
       state.packing.push({...data, id:maxId+1});
@@ -1559,7 +1558,7 @@ function savePackingItem(editId) {
     }
   }
   saveState(); closeModal(); renderPacking(document.getElementById('content'));
-  updatePackingBadge(); showToast(isShared&&editId<0?'已添加到6人清单！':'保存成功');
+  updatePackingBadge(); showToast(isShared&&editId<0?'已添加到5人清单！':'保存成功');
 }
 
 function togglePackingItem(id) {
@@ -1942,7 +1941,7 @@ function renderMembers(el) {
     {label:'🎨 佛罗伦萨行程 D10-11', members:florenceMembers, color:'#F3E8FF', dayRange:[10,11]},
   ];
 
-  el.innerHTML = groups.map(g=>`
+  el.innerHTML = groups.filter(g=>g.members.length>0).map(g=>`
     <div class="card" style="margin-bottom:16px;">
       <div class="card-title">${g.label} <span style="font-size:12px;font-weight:400;color:var(--c-text-secondary);">${g.dayRange[0]}天</span></div>
       <div style="display:grid;grid-template-columns:repeat(${Math.min(g.members.length,3)},1fr);gap:12px;">
@@ -1954,7 +1953,6 @@ function renderMembers(el) {
             ${isCurrent?'<div class="mc-badge">当前</div>':''}
             <div class="mc-avatar" style="background:#fff;border:2px solid ${m.color};">${m.avatar}</div>
             <div class="mc-name">${m.name}</div>
-            <div class="mc-duty">${m.duty}</div>
             <div style="margin-top:8px;font-size:11px;color:var(--c-text-secondary);">✅ ${doneCount}/${taskCount} 待办</div>
           </div>`;
         }).join('')}
@@ -1964,7 +1962,7 @@ function renderMembers(el) {
     <div class="card">
       <div class="card-title">💡 说明</div>
       <div style="font-size:13px;color:var(--c-text-secondary);line-height:1.8;">
-        • 6位成员按行程分段分工，每人负责各自行程段的攻略和安排<br>
+        • 5位成员协作，点击任意成员卡片可切换为该用户进行操作<br>
         • 点击上方任意成员卡片可切换为该用户进行操作<br>
         • 所有操作记录在"概览"的最新动态中<br>
         • 本工作台支持手机端访问，适合旅途中随时查看和更新
@@ -2081,8 +2079,8 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'ArrowRight') lightboxNav(1);
 });
 
-function renderCurrentUser(){const m=getMember(state.currentUser);document.getElementById('cu-avatar').style.background=m.color+'20';document.getElementById('cu-avatar').style.border='1.5px solid '+m.color;document.getElementById('cu-avatar').innerHTML=m.avatar;document.getElementById('cu-name').textContent=m.name;document.getElementById('cu-responsibility').textContent=m.duty}
-function renderUserDropdown(){document.getElementById('user-dropdown').innerHTML=MEMBERS.map(m=>`<div class="user-option" onclick="switchUser(${m.id})"><div class="avatar" style="background:${m.color}20;border:1.5px solid ${m.color};">${m.avatar}</div><div><div class="uo-name">${m.name}</div><div class="uo-desc">${m.duty}</div></div></div>`).join('')}
+function renderCurrentUser(){const m=getMember(state.currentUser);document.getElementById('cu-avatar').style.background=m.color+'20';document.getElementById('cu-avatar').style.border='1.5px solid '+m.color;document.getElementById('cu-avatar').innerHTML=m.avatar;document.getElementById('cu-name').textContent=m.name}
+function renderUserDropdown(){document.getElementById('user-dropdown').innerHTML=MEMBERS.map(m=>`<div class="user-option" onclick="switchUser(${m.id})"><div class="avatar" style="background:${m.color}20;border:1.5px solid ${m.color};">${m.avatar}</div><div><div class="uo-name">${m.name}</div></div></div>`).join('')}
 function switchUser(id){state.currentUser=id;document.getElementById('user-dropdown').classList.remove('show');renderCurrentUser();saveState();showToast('已切换为 '+getMember(id).name)}
 document.getElementById('current-user-btn').addEventListener('click',e=>{e.stopPropagation();document.getElementById('user-dropdown').classList.toggle('show')});
 document.addEventListener('click',()=>document.getElementById('user-dropdown').classList.remove('show'));
@@ -2344,14 +2342,14 @@ fetchExchangeRate();
 fetchItineraryWeather();
 
 console.log('意大利旅行协作工作台已就绪');
-console.log('👥 6人协作：刘意、单婧怡、严泽淳、黄玉婷、李心怡、何鸿蔚');
+console.log('👥 5人协作：刘意、单婧怡、严泽淳、黄玉婷、李心怡');
 console.log('📱 支持手机端访问');
 console.log('☁️ 点击左下角状态指示器配置云端同步');
 
 // 注册 Service Worker（支持添加到手机主屏幕）
 // 注意：URL 带版本参数用于缓存穿透，每次更新 SW 必须 bump 该版本号，否则浏览器可能用 HTTP 缓存中的旧 sw.js 导致检测不到更新
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js?v=16').then(reg => { reg.update(); console.log('SW registered v16'); }).catch(() => {})
+  navigator.serviceWorker.register('sw.js?v=17').then(reg => { reg.update(); console.log('SW registered v17'); }).catch(() => {})
     .catch(err => console.warn('SW registration failed', err));
 }
 </script>
