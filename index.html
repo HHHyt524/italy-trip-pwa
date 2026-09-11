@@ -398,7 +398,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
       <div id="sync-indicator" style="font-size:11px;margin-top:10px;text-align:center;cursor:pointer;" onclick="setupSupabaseConfig()" title="点击配置 Supabase 实时同步">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A89B8C;margin-right:4px;"></span> 离线模式
       </div>
-      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260911.3</div>
+      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260911.4</div>
     </div>
   </aside>
 
@@ -1928,28 +1928,15 @@ function deleteFile(id) {
    MEMBERS (by itinerary responsibility)
    ================================================================ */
 function renderMembers(el) {
-  // Group by responsibility areas
-  const romeMembers = MEMBERS.filter(m=>m.duty.includes('罗马'));
-  const southMembers = MEMBERS.filter(m=>m.duty.includes('南意'));
-  const tuscanyMembers = MEMBERS.filter(m=>m.duty.includes('托斯卡纳'));
-  const florenceMembers = MEMBERS.filter(m=>m.duty.includes('佛罗伦萨'));
-
-  const groups = [
-    {label:'🏛️ 罗马行程 D1-3', members:romeMembers, color:'#FDE8E0', dayRange:[1,3]},
-    {label:'🌊 南意行程 D4-6', members:southMembers, color:'#C9E5EB', dayRange:[4,6]},
-    {label:'🌳 托斯卡纳行程 D7-9', members:tuscanyMembers, color:'#DCFCE7', dayRange:[7,9]},
-    {label:'🎨 佛罗伦萨行程 D10-11', members:florenceMembers, color:'#F3E8FF', dayRange:[10,11]},
-  ];
-
-  el.innerHTML = groups.filter(g=>g.members.length>0).map(g=>`
+  el.innerHTML = `
     <div class="card" style="margin-bottom:16px;">
-      <div class="card-title">${g.label} <span style="font-size:12px;font-weight:400;color:var(--c-text-secondary);">${g.dayRange[0]}天</span></div>
-      <div style="display:grid;grid-template-columns:repeat(${Math.min(g.members.length,3)},1fr);gap:12px;">
-        ${g.members.map(m=>{
+      <div class="card-title">👥 团队成员 <span style="font-size:12px;font-weight:400;color:var(--c-text-secondary);">${MEMBERS.length}人</span></div>
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(MEMBERS.length,3)},1fr);gap:12px;">
+        ${MEMBERS.map(m=>{
           const isCurrent=m.id===state.currentUser;
           const taskCount=state.tasks.filter(t=>t.assignee===m.id).length;
           const doneCount=state.tasks.filter(t=>t.assignee===m.id&&t.status==='done').length;
-          return`<div class="member-card ${isCurrent?'current':''}" onclick="switchUser(${m.id})" style="background:${g.color};border-color:transparent;">
+          return`<div class="member-card ${isCurrent?'current':''}" onclick="switchUser(${m.id})" style="background:var(--c-surface-alt);border-color:transparent;">
             ${isCurrent?'<div class="mc-badge">当前</div>':''}
             <div class="mc-avatar" style="background:#fff;border:2px solid ${m.color};">${m.avatar}</div>
             <div class="mc-name">${m.name}</div>
@@ -1958,12 +1945,10 @@ function renderMembers(el) {
         }).join('')}
       </div>
     </div>
-  `).join('') + `
     <div class="card">
       <div class="card-title">💡 说明</div>
       <div style="font-size:13px;color:var(--c-text-secondary);line-height:1.8;">
-        • 5位成员协作，点击任意成员卡片可切换为该用户进行操作<br>
-        • 点击上方任意成员卡片可切换为该用户进行操作<br>
+        • ${MEMBERS.length}位成员协作，点击任意成员卡片可切换为该用户进行操作<br>
         • 所有操作记录在"概览"的最新动态中<br>
         • 本工作台支持手机端访问，适合旅途中随时查看和更新
       </div>
@@ -2349,7 +2334,7 @@ console.log('☁️ 点击左下角状态指示器配置云端同步');
 // 注册 Service Worker（支持添加到手机主屏幕）
 // 注意：URL 带版本参数用于缓存穿透，每次更新 SW 必须 bump 该版本号，否则浏览器可能用 HTTP 缓存中的旧 sw.js 导致检测不到更新
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js?v=18').then(reg => { reg.update(); console.log('SW registered v18'); }).catch(() => {})
+  navigator.serviceWorker.register('sw.js?v=19').then(reg => { reg.update(); console.log('SW registered v19'); }).catch(() => {})
     .catch(err => console.warn('SW registration failed', err));
 }
 </script>
