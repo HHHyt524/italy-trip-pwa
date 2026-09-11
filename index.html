@@ -398,7 +398,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
       <div id="sync-indicator" style="font-size:11px;margin-top:10px;text-align:center;cursor:pointer;" onclick="setupSupabaseConfig()" title="点击配置 Supabase 实时同步">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A89B8C;margin-right:4px;"></span> 离线模式
       </div>
-      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260911.4</div>
+      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260911.5</div>
     </div>
   </aside>
 
@@ -2334,8 +2334,27 @@ console.log('☁️ 点击左下角状态指示器配置云端同步');
 // 注册 Service Worker（支持添加到手机主屏幕）
 // 注意：URL 带版本参数用于缓存穿透，每次更新 SW 必须 bump 该版本号，否则浏览器可能用 HTTP 缓存中的旧 sw.js 导致检测不到更新
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js?v=19').then(reg => { reg.update(); console.log('SW registered v19'); }).catch(() => {})
-    .catch(err => console.warn('SW registration failed', err));
+  navigator.serviceWorker.register('sw.js?v=20').then(reg => {
+    reg.update();
+    console.log('SW registered v20');
+    // SW 更新后自动刷新页面，确保用户拿到最新版本
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (newWorker) {
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'activated') {
+            console.log('SW updated, reloading page...');
+            window.location.reload();
+          }
+        });
+      }
+    });
+  }).catch(err => console.warn('SW registration failed', err));
+  // 检测到 controller 变化（新 SW 接管）也刷新
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    console.log('SW controller changed, reloading...');
+    window.location.reload();
+  });
 }
 </script>
 </body>
