@@ -398,7 +398,7 @@ body{font-family:'Segoe UI','PingFang SC','Microsoft YaHei',system-ui,sans-serif
       <div id="sync-indicator" style="font-size:11px;margin-top:10px;text-align:center;cursor:pointer;" onclick="setupSupabaseConfig()" title="点击配置 Supabase 实时同步">
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#A89B8C;margin-right:4px;"></span> 离线模式
       </div>
-      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260828.1</div>
+      <div style="font-size:10px;color:#A89B8C;text-align:center;margin-top:6px;" id="app-version-badge">v20260911.1</div>
     </div>
   </aside>
 
@@ -902,24 +902,33 @@ async function fetchItineraryWeather() {
   const days = state.itinerary
     .map(d => ({ date: d.date, city: d.city.replace(/（返程）/g, '').replace(/→.*$/g, '').replace(/\+.*$/g, '') }))
     .filter((d, i, arr) => arr.findIndex(x => x.date === d.date && x.city === d.city) === i);
-  const results = [];
-  for (const day of days) {
+  // 并行请求所有日期，已覆盖的先显示，未覆盖的标为"待出"
+  const fetched = await Promise.all(days.map(async day => {
     const loc = WEATHER_CITIES[day.city] || WEATHER_CITIES['罗马'];
     try {
-      const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Europe/Rome&forecast_days=16&start_date=${day.date}&end_date=${day.date}`);
+      const resp = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=Europe/Rome&start_date=${day.date}&end_date=${day.date}`);
       const data = await resp.json();
-      if (data.daily && data.daily.time && data.daily.time.length > 0) {
-        results.push({
-          date: day.date,
-          city: day.city,
-          max: Math.round(data.daily.temperature_2m_max[0]),
-          min: Math.round(data.daily.temperature_2m_min[0]),
-          code: data.daily.weathercode[0]
-        });
+      if (data.error || !data.daily || !data.daily.time || data.daily.time.length === 0) {
+        return { date: day.date, city: day.city, pending: true };
       }
-    } catch(e) {}
-  }
-  weatherCache = results;
+      const max = data.daily.temperature_2m_max[0];
+      const min = data.daily.temperature_2m_min[0];
+      const code = data.daily.weathercode[0];
+      // 预报边缘日期可能返回 null 值
+      if (max === null || min === null || code === null) {
+        return { date: day.date, city: day.city, pending: true };
+      }
+      return {
+        date: day.date, city: day.city,
+        max: Math.round(max), min: Math.round(min), code: code
+      };
+    } catch(e) {
+      return { date: day.date, city: day.city, pending: true };
+    }
+  }));
+  // 按行程日期排序
+  fetched.sort((a, b) => a.date.localeCompare(b.date));
+  weatherCache = fetched;
   weatherLoading = false;
   const el = document.getElementById('content');
   if (el && state.currentView === 'dashboard') renderDashboard(el);
@@ -1021,17 +1030,27 @@ function renderDashboard(el) {
 
     ${(()=>{
       if (!weatherCache) return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报</div><div style="padding:20px;text-align:center;color:var(--c-text-light);font-size:13px;">正在获取沿途城市天气…</div></div>`;
-      if (weatherCache.length === 0) return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报</div><div style="padding:20px;text-align:center;color:var(--c-text-light);font-size:13px;">暂无可用预报（出行日期较远，Open-Meteo 最长支持未来 16 天）</div></div>`;
-      return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报 <span style="font-weight:400;color:var(--c-text-light);font-size:12px;">(数据来源 Open-Meteo)</span></div>
+      const available = weatherCache.filter(w=>!w.pending);
+      if (available.length === 0) return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报</div><div style="padding:20px;text-align:center;color:var(--c-text-light);font-size:13px;">暂无可用预报（出行日期较远，Open-Meteo 最长支持未来 16 天，临近出发自动更新）</div></div>`;
+      const pendingCount = weatherCache.filter(w=>w.pending).length;
+      return `<div class="card" style="margin-bottom:16px;"><div class="card-title">🌤️ 行程天气预报 <span style="font-weight:400;color:var(--c-text-light);font-size:12px;">(数据来源 Open-Meteo${pendingCount>0?` · ${pendingCount} 天待出`:''})</span></div>
       <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;">
-        ${weatherCache.map(w=>`
-          <div style="flex:0 0 90px;text-align:center;padding:12px 8px;background:var(--c-surface-alt);border-radius:12px;">
+        ${weatherCache.map(w=>{
+          if (w.pending) {
+            return `<div style="flex:0 0 90px;text-align:center;padding:12px 8px;background:var(--c-surface);border-radius:12px;opacity:.5;">
+              <div style="font-size:11px;color:var(--c-text-light);margin-bottom:4px;">${fmtDate(w.date)}</div>
+              <div style="font-size:11px;font-weight:600;color:var(--c-text-light);margin-bottom:6px;">${w.city}</div>
+              <div style="font-size:28px;margin-bottom:4px;opacity:.4;">⏳</div>
+              <div style="font-size:12px;color:var(--c-text-light);">待出</div>
+            </div>`;
+          }
+          return `<div style="flex:0 0 90px;text-align:center;padding:12px 8px;background:var(--c-surface-alt);border-radius:12px;">
             <div style="font-size:11px;color:var(--c-text-light);margin-bottom:4px;">${fmtDate(w.date)}</div>
             <div style="font-size:11px;font-weight:600;color:var(--c-text-secondary);margin-bottom:6px;">${w.city}</div>
             <div style="font-size:28px;margin-bottom:4px;">${weatherIcon(w.code)}</div>
             <div style="font-size:13px;font-weight:700;">${w.max}° / ${w.min}°</div>
-          </div>
-        `).join('')}
+          </div>`;
+        }).join('')}
       </div></div>`;
     })()}
 
@@ -2332,7 +2351,7 @@ console.log('☁️ 点击左下角状态指示器配置云端同步');
 // 注册 Service Worker（支持添加到手机主屏幕）
 // 注意：URL 带版本参数用于缓存穿透，每次更新 SW 必须 bump 该版本号，否则浏览器可能用 HTTP 缓存中的旧 sw.js 导致检测不到更新
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js?v=15').then(reg => { reg.update(); console.log('SW registered v15'); }).catch(() => {})
+  navigator.serviceWorker.register('sw.js?v=16').then(reg => { reg.update(); console.log('SW registered v16'); }).catch(() => {})
     .catch(err => console.warn('SW registration failed', err));
 }
 </script>
