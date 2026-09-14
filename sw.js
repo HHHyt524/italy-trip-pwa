@@ -1,4 +1,4 @@
-const CACHE_NAME = 'italy-trip-v21';
+const CACHE_NAME = 'italy-trip-v22';
 const SHELL_ASSETS = ['./icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
